@@ -1,0 +1,17 @@
+export const SCAM_EXAMPLES = [
+  { scam: true, text: "Data entry work from home. Earn Rs 45,000 a month, no experience needed. Pay Rs 1,500 registration fee to confirm your seat. Contact on WhatsApp only." },
+  { scam: true, text: "घर बैठे डेटा एंट्री का काम। बिना अनुभव के हर महीने 45,000 रुपये कमाएं। अपनी सीट पक्की करने के लिए 1,500 रुपये रजिस्ट्रेशन फीस दें। केवल व्हाट्सएप पर संपर्क करें।" },
+  { scam: true, text: "ಮನೆಯಿಂದಲೇ ಡೇಟಾ ಎಂಟ್ರಿ ಕೆಲಸ. ಅನುಭವ ಇಲ್ಲದೆ ತಿಂಗಳಿಗೆ 45,000 ರೂಪಾಯಿ ಗಳಿಸಿ. ನಿಮ್ಮ ಸೀಟು ಖಚಿತಪಡಿಸಲು 1,500 ರೂಪಾಯಿ ನೋಂದಣಿ ಶುಲ್ಕ ಪಾವತಿಸಿ. ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಮಾತ್ರ ಸಂಪರ್ಕಿಸಿ." },
+  { scam: true, text: "Urgent hiring for airport ground staff. 10th pass can apply. Salary Rs 38,000 plus free food. Pay Rs 2,500 for uniform and ID card before the interview." },
+  { scam: true, text: "Earn Rs 5,000 daily by liking YouTube videos. Join our Telegram group. Complete prepaid tasks to unlock bigger payouts." },
+  { scam: true, text: "यूट्यूब वीडियो लाइक करके रोज 5,000 रुपये कमाएं। हमारे टेलीग्राम ग्रुप से जुड़ें। बड़ी कमाई के लिए प्रीपेड टास्क पूरे करें।" },
+  { scam: true, text: "Message from Amazon HR: you are selected without an interview. Send your Aadhaar, PAN and the bank OTP on WhatsApp to begin onboarding." },
+  { scam: true, text: "ಅಮೆಜಾನ್ ಎಚ್‌ಆರ್ ಸಂದೇಶ: ಸಂದರ್ಶನವಿಲ್ಲದೆ ನೀವು ಆಯ್ಕೆಯಾಗಿದ್ದೀರಿ. ಕೆಲಸ ಆರಂಭಿಸಲು ನಿಮ್ಮ ಆಧಾರ್, ಪ್ಯಾನ್ ಮತ್ತು ಬ್ಯಾಂಕ್ ಒಟಿಪಿಯನ್ನು ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ಕಳುಹಿಸಿ." },
+  { scam: true, text: "Electrician job in Gulf. Salary Rs 1,50,000. Visa guaranteed. Pay Rs 60,000 processing charge to the agent's personal account today." },
+  { scam: false, text: "Electrician needed for apartment maintenance in Whitefield. ITI Electrical and 1 year experience required. Salary Rs 18,000 to 22,000 with PF and ESI. Walk in with your resume." },
+  { scam: false, text: "जयनगर की दुकान के लिए मोबाइल रिपेयर टेक्नीशियन चाहिए। स्क्रीन और बैटरी बदलना आना चाहिए। वेतन 15,000 से 20,000 रुपये। दुकान मालिक से बात करें।" },
+  { scam: false, text: "CNC operator at a Peenya factory. Diploma or ITI. Salary Rs 20,000 to 28,000 plus shift allowance. No recruitment fee is charged at any stage." },
+  { scam: false, text: "ಪೀಣ್ಯದ ಕಾರ್ಖಾನೆಯಲ್ಲಿ ಸಿಎನ್‌ಸಿ ಆಪರೇಟರ್. ಡಿಪ್ಲೊಮಾ ಅಥವಾ ಐಟಿಐ. ಸಂಬಳ 20,000 ರಿಂದ 28,000 ರೂಪಾಯಿ ಮತ್ತು ಶಿಫ್ಟ್ ಭತ್ಯೆ. ನೇಮಕಾತಿಯ ಯಾವುದೇ ಹಂತದಲ್ಲಿ ಶುಲ್ಕ ಪಡೆಯುವುದಿಲ್ಲ." },
+  { scam: false, text: "Accounts assistant. B.Com freshers with Tally knowledge. Salary Rs 16,000. Office in Rajajinagar. Apply through the company careers page." },
+  { scam: false, text: "Apprentice trainee under the NAPS scheme. ITI pass. Stipend Rs 12,000. Documents will be verified at the company office on joining." },
+];
