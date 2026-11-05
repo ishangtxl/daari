@@ -56,4 +56,4 @@ The job catalog is a snapshot, so run `pnpm catalog` to refresh it. `spikes/` ho
 
 The live app is at https://145-223-23-79.sslip.io. The VPS checks GitHub every minute, and a new commit on `main` goes live after its unit tests and build pass. If the new version fails any of those or will not start, the site stays on the last working one.
 
-The app runs as the `daari` service behind Caddy, from `~/daari/current`. Its keys are in `~/daari/shared/.env`, which is not in git, and changing them needs `sudo systemctl restart daari`. `~/daari/deploy.log` shows each deploy, and `journalctl -u daari -f` shows the app's logs. `deploy/` holds the deploy script, services and Caddy config.
+The app runs as the `daari` service behind Caddy, from `~/daari/current`. Its keys are in `~/daari/shared/.env`, which is not in git, and changing them needs `sudo systemctl restart daari`. `~/daari/deploy.log` shows each deploy, `readlink ~/daari/current` shows which commit is live, and `journalctl -u daari -f` shows the app's logs. `deploy/` holds the deploy script, services and Caddy config.
