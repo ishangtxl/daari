@@ -1,0 +1,4 @@
+# No compression here, because it would hold back the counsellor's streamed replies.
+145-223-23-79.sslip.io {
+	reverse_proxy 127.0.0.1:3111
+}

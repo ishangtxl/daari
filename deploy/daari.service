@@ -1,0 +1,21 @@
+[Unit]
+Description=Daari
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ishan
+WorkingDirectory=/home/ishan/daari/current
+Environment=NODE_ENV=production
+Environment=NEXT_TELEMETRY_DISABLED=1
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3111
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ishan/daari
+
+[Install]
+WantedBy=multi-user.target
