@@ -1,0 +1,10 @@
+[Unit]
+Description=Deploy Daari if main has moved
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ishan
+ExecStart=/home/ishan/daari/deploy.sh
+TimeoutStartSec=15min

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Builds the latest main in its own folder, switches to it, and goes back if it will not start.
-# The live site keeps running during the build, so a failed build changes nothing.
+# Runs every minute. When main has moved, it tests and builds the new commit in its own folder,
+# switches to it, and goes back if it will not start. The live site runs throughout the build,
+# so a failed test or build changes nothing.
 set -euo pipefail
 
 ROOT="$HOME/daari"
@@ -9,26 +10,26 @@ PORT=3111
 export NEXT_TELEMETRY_DISABLED=1
 
 exec 9>"$ROOT/deploy.lock"
-flock 9
+flock -n 9 || exit 0
 
 git -C "$ROOT/repo.git" fetch --quiet origin "+refs/heads/$BRANCH:refs/heads/$BRANCH"
 SHA=$(git -C "$ROOT/repo.git" rev-parse "$BRANCH")
 RELEASE="$ROOT/releases/$SHA"
 PREVIOUS=$(readlink -f "$ROOT/current" || true)
 
-if [ "$PREVIOUS" = "$RELEASE" ]; then
-  echo "$SHA is already live"
-  exit 0
-fi
+# Nothing new, or a commit that already failed: wait for the next push instead of retrying it.
+[ "$PREVIOUS" != "$RELEASE" ] || exit 0
+[ "$(cat "$ROOT/failed" 2>/dev/null)" != "$SHA" ] || exit 0
 
-echo "Building $SHA"
-rm -rf "$RELEASE"
-mkdir -p "$RELEASE"
-git -C "$ROOT/repo.git" archive "$SHA" | tar -x -C "$RELEASE"
-# Keys and the spend log live outside the release, so they survive every deploy.
-ln -s "$ROOT/shared/.env" "$RELEASE/.env"
-ln -s "$ROOT/shared/.spend.jsonl" "$RELEASE/.spend.jsonl"
-(cd "$RELEASE" && pnpm install --frozen-lockfile && pnpm build)
+exec > >(tee -a "$ROOT/deploy.log") 2>&1
+echo "=== $(date -u +%FT%TZ) building $SHA"
+
+fail() {
+  echo "$SHA" > "$ROOT/failed"
+  rm -rf "$RELEASE"
+  echo "=== FAILED $SHA: $1. The site is still on $(basename "$(readlink -f "$ROOT/current")")"
+  exit 1
+}
 
 switch_to() {
   ln -sfn "$1" "$ROOT/current.next"
@@ -44,15 +45,21 @@ healthy() {
   return 1
 }
 
+rm -rf "$RELEASE"
+mkdir -p "$RELEASE"
+git -C "$ROOT/repo.git" archive "$SHA" | tar -x -C "$RELEASE"
+# Keys and the spend log live outside the release, so they survive every deploy.
+ln -s "$ROOT/shared/.env" "$RELEASE/.env"
+ln -s "$ROOT/shared/.spend.jsonl" "$RELEASE/.spend.jsonl"
+(cd "$RELEASE" && pnpm install --frozen-lockfile && pnpm test && pnpm build) || fail "tests or build failed"
+
 switch_to "$RELEASE"
 if ! healthy; then
-  echo "$SHA did not start"
   if [ -n "$PREVIOUS" ] && [ -d "$PREVIOUS" ]; then
     switch_to "$PREVIOUS"
-    healthy && echo "Went back to $(basename "$PREVIOUS")"
+    healthy || echo "=== The previous version did not come back either"
   fi
-  rm -rf "$RELEASE"
-  exit 1
+  fail "it did not start"
 fi
 
 install -m 755 "$RELEASE/deploy/deploy.sh" "$ROOT/deploy.sh"
@@ -62,4 +69,4 @@ ls -1dt "$ROOT"/releases/* | tail -n +4 | while read -r old; do
   [ "$old" = "$PREVIOUS" ] || rm -rf "$old"
 done
 
-echo "$SHA is live"
+echo "=== $(date -u +%FT%TZ) $SHA is live"
