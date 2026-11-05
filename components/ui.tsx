@@ -9,6 +9,7 @@ import type { StopStatus } from "@/lib/types";
 import { useApp } from "./app-state";
 
 const PATHS: Record<string, ReactNode> = {
+  home: <path d="M3 11.5L12 4l9 7.5M5.5 9.5V20h13V9.5M10 20v-6h4v6" />,
   mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>,
   briefcase: <><rect x="3" y="8" width="18" height="12" rx="2" /><path d="M9 8V5h6v3M3 13h18" /></>,
   book: <path d="M4 5c3-1 6-1 8 1v14c-2-2-5-2-8-1zM20 5c-3-1-6-1-8 1v14c2-2 5-2 8-1z" />,
@@ -35,6 +36,7 @@ export function Icon({ name, size = 24 }: { name: keyof typeof PATHS | string; s
 }
 
 const NAV = [
+  { href: "/", icon: "home", label: "navHome" },
   { href: "/talk", icon: "mic", label: "navTalk" },
   { href: "/jobs", icon: "briefcase", label: "navJobs" },
   { href: "/learn", icon: "book", label: "navLearn" },
@@ -50,7 +52,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <nav className="nav" aria-label="Daari">
         <Link href="/" className="nav-brand">Daari</Link>
         {NAV.map((item) => {
-          const active = pathname.startsWith(item.href);
+          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           return (
             <Link key={item.href} href={item.href} className="nav-item" aria-current={active ? "page" : undefined}>
               <Icon name={item.icon} />

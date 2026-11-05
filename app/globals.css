@@ -63,7 +63,7 @@ html[lang="hi"] .tabs button { padding-block: 12px 6px; }
 .nav {
   position: fixed; inset: auto 0 0 0; z-index: 10;
   height: var(--nav-height); padding-bottom: var(--safe-bottom);
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(6, 1fr);
   background: var(--paper); border-top: 2px solid var(--ink);
 }
 .nav-brand { display: none; }
@@ -74,6 +74,8 @@ html[lang="hi"] .tabs button { padding-block: 12px 6px; }
 }
 .nav-item[aria-current="page"] { color: var(--cobalt); font-weight: 700; }
 .nav-item[aria-current="page"] .icon { stroke-width: 2.6; }
+/* Six Kannada labels only fit the smallest phones a size down. */
+@media (max-width: 359px) { .nav-item { font-size: 12px; } }
 
 /* First screen */
 .welcome {

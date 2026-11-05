@@ -104,7 +104,7 @@ await page.locator(".verdict").waitFor({ timeout: 30000 });
 step(`scam result: ${await page.locator(".verdict h2").innerText()} | ${(await page.locator(".signal-list li").allInnerTexts()).join("; ")}`);
 await shot("12-check");
 
-await page.locator("nav").getByRole("link", { name: "मेरा रिज्यूमे" }).click();
+await page.locator("nav").getByRole("link", { name: "रिज्यूमे" }).click();
 await page.getByLabel("आपका नाम, अंग्रेज़ी अक्षरों में").fill("Ravi Kumar");
 await page.getByLabel("फ़ोन नंबर").fill("9876543210");
 await page.getByRole("button", { name: "मेरा रिज्यूमे लिखें" }).click();
