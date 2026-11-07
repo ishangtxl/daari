@@ -23,6 +23,7 @@ function OpenJobs() {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [location, setLocation] = useState(profile.area);
+  useEffect(() => { setLocation(profile.area); }, [profile.area]);
   const [distanceEnabled, setDistanceEnabled] = useState(false);
   const [distanceByJobId, setDistanceByJobId] = useState<Record<string, number | null> | null>(null);
   const [distanceLoading, setDistanceLoading] = useState(false);
@@ -287,6 +288,7 @@ function Nearby() {
   const { t, effectiveLang, profile, roles } = useApp();
   const [roleId, setRoleId] = useState(roles[0] ?? "mobile_repair");
   const [area, setArea] = useState(profile.area);
+  useEffect(() => { setArea(profile.area); }, [profile.area]);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [result, setResult] = useState<Outreach | null>(null);

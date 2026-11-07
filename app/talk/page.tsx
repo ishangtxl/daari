@@ -56,8 +56,12 @@ export default function Talk() {
         update({ messages: [...withUser, { id, role: "assistant", content: reply }] });
         setStreaming(null);
         if (spoken) speak(id, reply, effectiveLang);
+        // Include the assistant's reply in the extraction corpus so that the profile re-read
+        // has the full exchange — especially important when the user states a new area/location.
+        const wordsWithReply = `${words}\n${reply}`.trim().slice(-12000);
+        update((current) => ({ profile: { ...current.profile, words: wordsWithReply } }));
         // Learn from the conversation in the background, so that replies are never delayed by it.
-        postJson<{ profile: Partial<Profile> }>("/api/profile", { words })
+        postJson<{ profile: Partial<Profile> }>("/api/profile", { words: wordsWithReply })
           .then(({ profile: found }) => update((current) => ({ profile: mergeProfile(current.profile, found) })))
           .catch(() => {});
       } catch (error) {
