@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { speak, stopSpeaking, unlockAudio, usePlayback } from "@/lib/client/audio";
 import { parsePay } from "@/lib/pay";
@@ -106,6 +106,35 @@ export function LanguageSwitcher() {
   );
 }
 
+function AuthButton() {
+  const { t, user, signOut } = useApp();
+  const router = useRouter();
+
+  if (!user) {
+    return (
+      <Link href="/login" className="btn btn-quiet auth-btn" aria-label={t("navLogin")}>
+        <Icon name="person" size={20} />
+        <span>{t("navLogin")}</span>
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="btn btn-quiet auth-btn"
+      aria-label={t("signOut")}
+      onClick={async () => {
+        await signOut();
+        router.push("/login");
+      }}
+    >
+      <Icon name="person" size={20} />
+      <span>{t("signOut")}</span>
+    </button>
+  );
+}
+
 export function Shell({ children }: { children: ReactNode }) {
   const { t } = useApp();
   const pathname = usePathname();
@@ -124,7 +153,7 @@ export function Shell({ children }: { children: ReactNode }) {
         })}
       </nav>
       <main className="main">
-        <div className="topbar"><LanguageSwitcher /></div>
+        <div className="topbar"><LanguageSwitcher /><AuthButton /></div>
         {children}
       </main>
     </div>

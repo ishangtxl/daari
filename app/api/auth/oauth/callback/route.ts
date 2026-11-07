@@ -1,0 +1,86 @@
+/**
+ * GET /api/auth/oauth/callback
+ *
+ * Google redirects here after the user grants permission.
+ * 1. Validate `state` against the cookie set in /api/auth/oauth/google.
+ * 2. Exchange the `code` for an access token.
+ * 3. Fetch the user's profile from Google.
+ * 4. Issue a Daari session cookie and redirect to home.
+ */
+
+import { NextResponse, type NextRequest } from "next/server";
+import { cookies } from "next/headers";
+import { createSessionToken, setSessionCookie } from "@/lib/auth";
+
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const errorParam = url.searchParams.get("error");
+
+  // User denied access.
+  if (errorParam) {
+    return NextResponse.redirect(new URL(`/login?error=oauth_denied`, req.url));
+  }
+
+  if (!code || !state) {
+    return NextResponse.redirect(new URL(`/login?error=oauth_invalid`, req.url));
+  }
+
+  // Verify CSRF state.
+  const jar = await cookies();
+  const savedState = jar.get("oauth_state")?.value;
+  jar.delete("oauth_state");
+
+  if (!savedState || savedState !== state) {
+    return NextResponse.redirect(new URL(`/login?error=oauth_state_mismatch`, req.url));
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+
+  if (!clientId || !clientSecret || !redirectUri) {
+    return NextResponse.redirect(new URL(`/login?error=oauth_not_configured`, req.url));
+  }
+
+  // Exchange code for tokens.
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
+
+  if (!tokenRes.ok) {
+    console.error("[auth/oauth/callback] token exchange failed", await tokenRes.text());
+    return NextResponse.redirect(new URL(`/login?error=oauth_token_failed`, req.url));
+  }
+
+  const { access_token } = (await tokenRes.json()) as { access_token: string };
+
+  // Fetch user info.
+  const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+    headers: { Authorization: `Bearer ${access_token}` },
+  });
+
+  if (!userRes.ok) {
+    return NextResponse.redirect(new URL(`/login?error=oauth_userinfo_failed`, req.url));
+  }
+
+  const { sub, name, email } = (await userRes.json()) as { sub: string; name?: string; email?: string };
+
+  const sessionToken = await createSessionToken({
+    sub,
+    name: name ?? email ?? "Google user",
+    provider: "google",
+  });
+  await setSessionCookie(sessionToken);
+
+  return NextResponse.redirect(new URL("/", req.url));
+}
