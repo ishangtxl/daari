@@ -17,7 +17,7 @@
 | Job | Tool |
 |---|---|
 | Speech to text, text to speech | Sarvam (`saaras:v3` codemix, `bulbul:v3`) |
-| Conversation, writing, translation | GPT-6 Luna via ZenMux, with GPT-6.1 Terra for resumes |
+| Conversation, writing, translation | IBM Bob (`premium` conversational API) / GPT-6 Luna via ZenMux, with GPT-6.1 Terra for resumes |
 | Fast yes/no decisions: fit, each requirement, scam signals, resume claims | Jev (TypeSafe) |
 | Job listings | JSearch, prepared ahead of time in `data/jobs.json` |
 | Local businesses | Google Places, or a Google Maps search when no key is set |
@@ -30,6 +30,7 @@ Profiles stay in the browser's local storage, and text is only sent to the serve
 Copy `.env.example` to `.env` in this project root, then add your server-side keys:
 
 ```
+IBM_BOB_API_KEY=        # conversational & resume API (or ZENMUX_API_KEY)
 ZENMUX_API_KEY=
 JEV_API_KEY=
 SARVAM_API_KEY=
