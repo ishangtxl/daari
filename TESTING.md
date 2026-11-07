@@ -66,6 +66,12 @@ Ravi has a 10th pass and no ITI, and spent two years fixing phones at his uncle'
 - Under **Resume**, tap **Delete my information from this phone** and confirm.
 - Expect: your details are gone, the language stays, and Home asks "What work have you done?" again.
 
+## Eligibility sorting
+
+- Select **Best eligibility match**. The count is based on every listed requirement shown in **You meet X of Y requirements**: skills, education, experience and other criteria.
+- Jobs with all requirements met (X = Y) appear first; jobs with one unmet requirement come next, then two unmet requirements, and so on.
+- For jobs with the same number of unmet requirements, the higher share of requirements met comes first. Safer listings still rank above listings flagged for payment or sensitive-information requests.
+
 ## Watch for
 
 - **Wrong gaps:** "You need this" on something Ravi clearly has. "Can communicate in English or Hindi" has already shown up this way.

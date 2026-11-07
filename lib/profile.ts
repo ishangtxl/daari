@@ -6,13 +6,13 @@ import type { Profile } from "./types";
  * "Screen replacement". Name and phone they typed are never overwritten.
  */
 export function mergeProfile(current: Profile, next: Partial<Profile>): Profile {
-  const pick = <K extends "name" | "phone" | "area" | "education">(key: K) => current[key] || next[key] || "";
+  const pick = <K extends "name" | "phone" | "education">(key: K) => current[key] || next[key] || "";
   const list = (known: string[], fresh: string[] | undefined) => (fresh?.length ? fresh : known);
   return {
     ...current,
     name: pick("name"),
     phone: pick("phone"),
-    area: pick("area"),
+    area: next.area || current.area || "",
     education: next.education || current.education,
     hasIti: next.hasIti ?? current.hasIti,
     hasDrivingLicence: next.hasDrivingLicence ?? current.hasDrivingLicence,

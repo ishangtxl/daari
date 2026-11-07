@@ -1,26 +1,51 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp, type ApplicationStatus } from "@/components/app-state";
+import { Chip, ChipGroup, Sheet } from "@/components/job-controls";
 import { CopyButton, ErrorNote, Icon, Loading, PayText, ReadAloud, RouteLine, Shell, TabebuiaTree } from "@/components/ui";
 import { errorKey, postJson } from "@/lib/client/api";
 import { ROLES } from "@/lib/roles";
+import { isRisky, sortJobs, type JobSort } from "@/lib/rank";
 import type { MatchedJob } from "@/lib/types";
 
-const isRisky = (job: MatchedJob) => job.signals.asks_payment >= 0.7 || job.signals.asks_sensitive >= 0.7;
+type DistanceFilter = "all" | "5" | "10" | "20";
+type SalaryFilter = "all" | "5000" | "10000" | "20000";
+
+const DISTANCES: DistanceFilter[] = ["all", "5", "10", "20"];
+const DISTANCE_LABEL = { all: "anyDistance", "5": "within5", "10": "within10", "20": "within20" } as const;
+const SALARIES: SalaryFilter[] = ["all", "5000", "10000", "20000"];
+const SALARY_LABEL = { all: "anySalary", "5000": "salary5000Plus", "10000": "salary10000Plus", "20000": "salary20000Plus" } as const;
 
 function OpenJobs() {
   const { t, effectiveLang, profile, jobs, jobsKey, update } = useApp();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const key = profile.words;
+  const [location, setLocation] = useState(profile.area);
+  useEffect(() => { setLocation(profile.area); }, [profile.area]);
+  const [distanceEnabled, setDistanceEnabled] = useState(false);
+  const [distanceByJobId, setDistanceByJobId] = useState<Record<string, number | null> | null>(null);
+  const [distanceLoading, setDistanceLoading] = useState(false);
+  const distanceRequestRef = useRef(false);
+  const [distanceProblem, setDistanceProblem] = useState<string | null>(null);
+  const [distanceFilter, setDistanceFilter] = useState<DistanceFilter>("all");
+  const [salaryFilter, setSalaryFilter] = useState<SalaryFilter>("all");
+  const [sortBy, setSortBy] = useState<JobSort>("recommended");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const key = `${profile.words}\u0000${profile.area.trim().toLocaleLowerCase("en-IN")}`;
 
   const load = useCallback(async () => {
     setBusy(true);
     setProblem(null);
     try {
-      const result = await postJson<{ jobs: MatchedJob[]; roles: string[] }>("/api/match", { profile });
+      const result = await postJson<{ jobs: MatchedJob[]; roles: string[]; distanceEnabled?: boolean }>("/api/match", { profile });
+      const hasRoutesApi = Boolean(result.distanceEnabled);
+      setDistanceEnabled(hasRoutesApi);
+      setDistanceByJobId(null);
+      setDistanceProblem(null);
+      setDistanceFilter("all");
+      setSortBy("recommended");
       update({ jobs: result.jobs, roles: result.roles, jobsKey: key, plan: null });
     } catch (error) {
       setProblem(t(errorKey(error)));
@@ -29,13 +54,109 @@ function OpenJobs() {
     }
   }, [key, profile, t, update]);
 
+  const loadDistances = useCallback(async () => {
+    if (distanceRequestRef.current || !jobs?.length || !profile.area.trim()) return;
+    distanceRequestRef.current = true;
+    setDistanceLoading(true);
+    setDistanceProblem(null);
+    try {
+      const result = await postJson<{ distances: Record<string, number | null> }>("/api/job-distances", {
+        area: profile.area,
+        jobs: jobs.map(({ id, area }) => ({ id, area })),
+      });
+      setDistanceByJobId(result.distances);
+    } catch (error) {
+      setDistanceProblem(t(errorKey(error)));
+      setDistanceFilter("all");
+      setSortBy((current) => current === "distance" ? "recommended" : current);
+    } finally {
+      distanceRequestRef.current = false;
+      setDistanceLoading(false);
+    }
+  }, [jobs, profile.area, t]);
+
   const hasProfile = profile.words.trim().length > 0;
+
   useEffect(() => {
-    // Matches depend on what the person has said, so they are only fetched again when that changes.
+    let active = true;
+    fetch("/api/job-distances", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Could not check road-distance availability");
+        return response.json() as Promise<{ available?: boolean }>;
+      })
+      .then((result) => {
+        if (active) setDistanceEnabled(Boolean(result.available));
+      })
+      .catch(() => {
+        if (active) setDistanceEnabled(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    // Matches depend on what the person has said and the area they live in.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (hasProfile && (jobs === null || jobsKey !== key)) load();
+    if (hasProfile && profile.area.trim() && (jobs === null || jobsKey !== key)) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasProfile, key]);
+
+  useEffect(() => {
+    const needsDistance = distanceFilter !== "all" || sortBy === "distance";
+    if (needsDistance && distanceEnabled && jobs?.length && jobsKey === key && distanceByJobId === null && !distanceLoading) {
+      void loadDistances();
+    }
+  }, [distanceFilter, sortBy, distanceEnabled, jobs, jobsKey, key, distanceByJobId, distanceLoading, loadDistances]);
+
+  const waitingForDistance = distanceEnabled && (distanceFilter !== "all" || sortBy === "distance") && distanceByJobId === null && !distanceProblem;
+
+  const { filteredJobs, noPayHidden } = useMemo(() => {
+    if (!jobs) return { filteredJobs: [], noPayHidden: 0 };
+    let noPay = 0;
+    const filtered = jobs.filter((job) => {
+      if (distanceFilter !== "all") {
+        const distanceKm = distanceByJobId?.[job.id];
+        if (distanceKm == null || distanceKm > Number(distanceFilter)) return false;
+      }
+      if (salaryFilter !== "all") {
+        // A job that does not show its pay cannot meet a minimum, so it is hidden, and we say so.
+        if (job.salaryMin == null) {
+          noPay += 1;
+          return false;
+        }
+        if (job.salaryMin <= Number(salaryFilter)) return false;
+      }
+      return true;
+    });
+    return { filteredJobs: sortJobs(filtered, sortBy, distanceByJobId), noPayHidden: noPay };
+  }, [jobs, distanceByJobId, distanceFilter, salaryFilter, sortBy]);
+
+  const locationForm = (
+    <form
+      className="job-location-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const area = location.trim();
+        if (!area || area.toLocaleLowerCase("en-IN") === profile.area.trim().toLocaleLowerCase("en-IN")) return;
+        update({ profile: { ...profile, area }, jobs: null, jobsKey: "", plan: null });
+      }}
+    >
+      <label className="field">
+        <span>{t("jobLocation")}</span>
+        <input value={location} placeholder={t("locationPlaceholder")} onChange={(event) => setLocation(event.target.value)} />
+      </label>
+      <button type="submit" className="btn btn-quiet" disabled={!location.trim() || location.trim().toLocaleLowerCase("en-IN") === profile.area.trim().toLocaleLowerCase("en-IN") || busy}>
+        {profile.area ? t("updateArea") : t("saveLocation")}
+      </button>
+    </form>
+  );
+
+  const activeCount = (distanceFilter !== "all" ? 1 : 0) + (salaryFilter !== "all" ? 1 : 0);
+
+  const clearFilters = () => {
+    setDistanceFilter("all");
+    setSalaryFilter("all");
+    setSortBy("recommended");
+  };
 
   if (!hasProfile) {
     return (
@@ -47,28 +168,106 @@ function OpenJobs() {
       </div>
     );
   }
-  if (busy) return <Loading text={t("checkingJobs")} />;
+
+  if (!profile.area.trim()) {
+    return (
+      <section className="job-location-intro">
+        <h2>{t("jobLocationTitle")}</h2>
+        <p>{t("jobLocationBody")}</p>
+        {locationForm}
+      </section>
+    );
+  }
   if (problem) return <ErrorNote text={problem} onRetry={load} />;
-  if (!jobs?.length) return <p className="empty-text">{t("noJobs")}</p>;
+  if (busy || jobs === null || jobsKey !== key) return <Loading text={t("checkingJobs")} />;
+  if (!jobs.length) return <p className="empty-text">{t("noJobs")}</p>;
 
   return (
     <>
-      <ul className="job-list">
-        {jobs.map((job) => (
-          <li key={job.id}>
-            <Link href={`/jobs/${job.id}`} className="job-row">
-              <div className="job-row-head">
-                <h3>{job.title[effectiveLang]}</h3>
-                <PayText className="job-pay" text={job.salaryText} />
-              </div>
-              <p className="job-where">{job.employer}, {job.area}</p>
-              <RouteLine stops={job.stops} />
-              <p className="job-meets">{t("meets", { met: job.met, total: job.stops.length })}</p>
-              {isRisky(job) && <p className="job-warning"><Icon name="warning" size={18} />{t("warnListing")}</p>}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {locationForm}
+      <section className="job-controls" aria-label={t("jobFilters")}>
+        <ChipGroup label={t("sortBy")}>
+          <Chip selected={sortBy === "recommended"} icon="star" onClick={() => setSortBy("recommended")}>{t("chipBest")}</Chip>
+          {distanceEnabled && <Chip selected={sortBy === "distance"} icon="pin" onClick={() => setSortBy("distance")}>{t("chipNear")}</Chip>}
+          <Chip selected={sortBy === "qualification"} icon="tool" onClick={() => setSortBy("qualification")}>{t("eligibilitySort")}</Chip>
+          <Chip selected={sortBy === "salary"} icon="rupee" onClick={() => setSortBy("salary")}>{t("chipPay")}</Chip>
+        </ChipGroup>
+        <button type="button" className="btn btn-quiet filter-button" onClick={() => setSheetOpen(true)}>
+          <Icon name="filter" size={22} />
+          <span>{t("filterButton")}</span>
+          {activeCount > 0 && <span className="filter-badge" aria-label={String(activeCount)}>{activeCount}</span>}
+        </button>
+      </section>
+      {(sortBy === "recommended" || sortBy === "qualification") && (
+        <p className="sort-explanation">
+          {sortBy === "recommended" ? t("sortBestHint") : t("sortRequirementsHint")}
+        </p>
+      )}
+      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t("filterSheetTitle")} closeLabel={t("close")}>
+        {distanceEnabled && (
+          <ChipGroup label={t("howFar")}>
+            {DISTANCES.map((value) => <Chip key={value} selected={distanceFilter === value} onClick={() => setDistanceFilter(value)}>{t(DISTANCE_LABEL[value])}</Chip>)}
+          </ChipGroup>
+        )}
+        <ChipGroup label={t("monthlyPay")}>
+          {SALARIES.map((value) => <Chip key={value} selected={salaryFilter === value} onClick={() => setSalaryFilter(value)}>{t(SALARY_LABEL[value])}</Chip>)}
+        </ChipGroup>
+        {salaryFilter !== "all" && noPayHidden > 0 && <p className="honest-note">{t("noPayHidden", { count: noPayHidden })}</p>}
+        <div className="sheet-actions">
+          <button type="button" className="btn btn-primary" onClick={() => setSheetOpen(false)}>
+            {waitingForDistance || distanceLoading ? t("showJobsLoading") : t("showJobsButton", { count: filteredJobs.length })}
+          </button>
+          {activeCount > 0 && <button type="button" className="link-button" onClick={() => { setDistanceFilter("all"); setSalaryFilter("all"); }}>{t("clearFilters")}</button>}
+        </div>
+      </Sheet>
+      {activeCount > 0 && (
+        <div className="active-filters">
+          {distanceFilter !== "all" && (
+            <button type="button" className="chip chip-remove" aria-label={t("removeFilter", { name: t(DISTANCE_LABEL[distanceFilter]) })} onClick={() => setDistanceFilter("all")}>
+              <span>{t(DISTANCE_LABEL[distanceFilter])}</span><Icon name="close" size={18} />
+            </button>
+          )}
+          {salaryFilter !== "all" && (
+            <button type="button" className="chip chip-remove" aria-label={t("removeFilter", { name: t(SALARY_LABEL[salaryFilter]) })} onClick={() => setSalaryFilter("all")}>
+              <span>{t(SALARY_LABEL[salaryFilter])}</span><Icon name="close" size={18} />
+            </button>
+          )}
+          <button type="button" className="link-button" onClick={clearFilters}>{t("clearFilters")}</button>
+        </div>
+      )}
+      {distanceProblem && <ErrorNote text={distanceProblem} onRetry={loadDistances} />}
+      {waitingForDistance || distanceLoading ? <Loading text={t("calculatingDistances")} stops={3} /> : filteredJobs.length ? (
+
+        <>
+          <p className="job-results-count">{t("showingJobs", { count: filteredJobs.length })}</p>
+          {distanceByJobId !== null && <p className="distance-attribution">{t("distanceAttribution")} · <span translate="no">Google Maps · Powered by Google, ©2026 Google</span></p>}
+          <ul className="job-list">
+            {filteredJobs.map((job) => (
+              <li key={job.id}>
+                <Link href={`/jobs/${job.id}`} className="job-row">
+                  <div className="job-row-head">
+                    <h3>{job.title[effectiveLang]}</h3>
+                    <PayText className="job-pay" text={job.salaryText} />
+                  </div>
+                  <p className="job-where">
+                    {job.employer}, {job.area}
+                    {distanceByJobId?.[job.id] != null && <> · {t("distanceAway", { distance: distanceByJobId[job.id]!.toFixed(1) })}</>}
+                  </p>
+                  <RouteLine stops={job.stops} />
+                  <p className="job-meets">{t("meets", { met: job.met, total: job.stops.length })}</p>
+                  {isRisky(job) && <p className="job-warning"><Icon name="warning" size={18} />{t("warnListing")}</p>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <div className="empty-filter-results">
+          <p>{t("filteredNoJobs")}</p>
+          {distanceByJobId !== null && <p className="distance-attribution">{t("distanceAttribution")} · <span translate="no">Google Maps · Powered by Google, ©2026 Google</span></p>}
+          <button type="button" className="btn btn-quiet" onClick={clearFilters}>{t("clearFilters")}</button>
+        </div>
+      )}
       <section className="portals">
         <h2>{t("alsoCheck")}</h2>
         <a href="https://www.ncs.gov.in" target="_blank" rel="noreferrer"><Icon name="external" size={18} />{t("portalNcs")}</a>
@@ -78,7 +277,6 @@ function OpenJobs() {
     </>
   );
 }
-
 type Place = { name: string; address: string; phone: string | null; website: string | null; mapsUrl: string | null; rating: number | null };
 type Outreach = {
   places: Place[] | null;
@@ -90,6 +288,7 @@ function Nearby() {
   const { t, effectiveLang, profile, roles } = useApp();
   const [roleId, setRoleId] = useState(roles[0] ?? "mobile_repair");
   const [area, setArea] = useState(profile.area);
+  useEffect(() => { setArea(profile.area); }, [profile.area]);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [result, setResult] = useState<Outreach | null>(null);

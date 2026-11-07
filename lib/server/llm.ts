@@ -1,19 +1,32 @@
 import { appendFileSync } from "node:fs";
 import { z } from "zod";
 
-const BASE = "https://zenmux.ai/api/v1";
+function isBob(): boolean {
+  return Boolean(process.env.IBM_BOB_API_KEY || process.env.BOB_API_KEY);
+}
 
-// Luna is the default on measured cost and quality. Terra is reserved for the final resume text.
+const BOB_BASE = process.env.IBM_BOB_BASE_URL ?? "https://api.us-east.bob.ibm.com/inference/v1";
+const ZENMUX_BASE = process.env.ZENMUX_BASE_URL ?? "https://zenmux.ai/api/v1";
+
+// IBM Bob (premium conversational API) is used when IBM_BOB_API_KEY is set, falling back to ZenMux.
 export const MODELS = {
-  chat: process.env.MODEL_CHAT ?? "openai/gpt-6-luna",
-  work: process.env.MODEL_WORK ?? "openai/gpt-6-luna",
-  resume: process.env.MODEL_RESUME ?? "openai/gpt-6.1-terra",
+  get chat() {
+    return process.env.MODEL_CHAT ?? (isBob() ? "premium" : "openai/gpt-6-luna");
+  },
+  get work() {
+    return process.env.MODEL_WORK ?? (isBob() ? "premium" : "openai/gpt-6-luna");
+  },
+  get resume() {
+    return process.env.MODEL_RESUME ?? (isBob() ? "premium" : "openai/gpt-6.1-terra");
+  },
 };
 
-// Dollars per million tokens (input, output) at ZenMux's listed short-prompt rates.
+// Dollars per million tokens (input, output) at listed rates.
 const PRICES: Record<string, [number, number]> = {
   "openai/gpt-6-luna": [0.1, 0.5],
   "openai/gpt-6.1-terra": [1, 5],
+  premium: [1, 1], // IBM Bob premium: flat 2 Bobcoins/M tokens @ $0.50/coin = $1.00/M
+  fast: [0.42, 0.42], // IBM Bob fast: 5/6 Bobcoins/M tokens = ~$0.42/M
 };
 
 // About Rs 1,000. Counts this process only, so it is a safety net and not an account balance.
@@ -47,9 +60,28 @@ function assertBudget() {
 }
 
 async function call(body: object, signal?: AbortSignal) {
+  const bobKey = process.env.IBM_BOB_API_KEY || process.env.BOB_API_KEY;
+  if (bobKey) {
+    const headers: Record<string, string> = {
+      Authorization: `Apikey ${bobKey}`,
+      "User-Agent": process.env.IBM_BOB_USER_AGENT ?? "pi-bob/0.2.2",
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    };
+    if (process.env.IBM_BOB_INSTANCE_ID) headers["x-instance-id"] = process.env.IBM_BOB_INSTANCE_ID;
+    if (process.env.IBM_BOB_TEAM_ID) headers["x-team-id"] = process.env.IBM_BOB_TEAM_ID;
+
+    return fetch(`${BOB_BASE}/chat/completions`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal,
+    });
+  }
+
   const key = process.env.ZENMUX_API_KEY;
-  if (!key) throw new Error("ZENMUX_API_KEY is not set");
-  return fetch(`${BASE}/chat/completions`, {
+  if (!key) throw new Error("Neither IBM_BOB_API_KEY nor ZENMUX_API_KEY is set");
+  return fetch(`${ZENMUX_BASE}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -128,9 +160,10 @@ export async function chatStream(task: string, messages: Message[], signal?: Abo
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
         for (const line of lines) {
-          if (!line.startsWith("data:") || line.includes("[DONE]")) continue;
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:") || trimmed.includes("[DONE]")) continue;
           try {
-            const data = JSON.parse(line.slice(5));
+            const data = JSON.parse(trimmed.slice(5).trim());
             if (data.usage) record(task, model, data.usage);
             const text = data.choices?.[0]?.delta?.content;
             if (text) controller.enqueue(encoder.encode(text));
