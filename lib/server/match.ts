@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { ROLES } from "../roles";
 import type { Job, MatchedJob, Profile, StopStatus } from "../types";
+import { fitBand, isRisky } from "../rank";
 import { decide, type Question } from "./jev";
 
 let catalog: Job[] | null = null;
@@ -82,16 +83,11 @@ export function toMatched(job: Job, scores: Record<string, number>, confirmed: P
   return { ...rest, stops, fit, met: stops.filter((stop) => stop.status === "met").length };
 }
 
-// The right kind of work matters more than meeting a few easy requirements, so fit is the first sort.
-const FIT_BANDS = [0.7, 0.4];
-const fitBand = (fit: number) => FIT_BANDS.findIndex((floor) => fit >= floor) + 1 || FIT_BANDS.length + 1;
-
 export function rankMatches(jobs: MatchedJob[]) {
   const share = (job: MatchedJob) => (job.stops.length ? job.met / job.stops.length : 0);
-  const risky = (job: MatchedJob) => job.signals.asks_payment >= 0.7 || job.signals.asks_sensitive >= 0.7;
   return [...jobs].sort(
     (a, b) =>
-      Number(risky(a)) - Number(risky(b)) ||
+      Number(isRisky(a)) - Number(isRisky(b)) ||
       fitBand(a.fit) - fitBand(b.fit) ||
       share(b) - share(a) ||
       b.met - a.met ||

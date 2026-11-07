@@ -23,6 +23,7 @@ export default function Talk() {
   const endRef = useRef<HTMLDivElement>(null);
   // Arriving from the home screen's talk button should start listening right away.
   const [autoStart] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("listen"));
+  const [fromResume] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "resume");
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
@@ -71,7 +72,7 @@ export default function Talk() {
   if (!ready) return <Shell><span /></Shell>;
 
   const readyForJobs = profile.experience.length > 0 || profile.skills.length > 0;
-  const greeting = t("greeting");
+  const greeting = fromResume ? t("greetingResume") : profile.area.trim() ? t("greeting") : t("greetingLocation");
   return (
     <Shell>
       <div className="talk">
@@ -93,6 +94,13 @@ export default function Talk() {
           {streaming !== null && <div className="bubble bubble-assistant"><p>{streaming}</p></div>}
           {busy && streaming === null && <Loading text={t("thinking")} stops={3} />}
           {problem && lastText && <ErrorNote text={problem} onRetry={() => send(lastText.text, lastText.spoken, true)} />}
+          {fromResume && !busy && (
+            <Link href="/me" className="ready-link">
+              <Icon name="person" />
+              <span>{t("resumeBack")}</span>
+              <strong>{t("navMe")}</strong>
+            </Link>
+          )}
           {readyForJobs && !busy && (
             <Link href="/jobs" className="ready-link">
               <Icon name="briefcase" />

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { speak, stopSpeaking, unlockAudio, usePlayback } from "@/lib/client/audio";
 import { parsePay } from "@/lib/pay";
-import type { StopStatus } from "@/lib/types";
+import { LANGS, type Lang, type StopStatus } from "@/lib/types";
 import { useApp } from "./app-state";
 
 const PATHS: Record<string, ReactNode> = {
@@ -25,6 +25,13 @@ const PATHS: Record<string, ReactNode> = {
   phone: <path d="M5 4h4l2 5-2.5 2a12 12 0 0 0 5 5l2-2.5 5 2v4a2 2 0 0 1-2 2C10 21 3 14 3 6a2 2 0 0 1 2-2z" />,
   download: <path d="M12 4v11M7 11l5 5 5-5M5 20h14" />,
   check: <path d="M5 12l5 5 9-10" />,
+  globe: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></>,
+  star: <path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z" />,
+  pin: <><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></>,
+  tool: <path d="M5 7l2 2 3-3.5M5 16l2 2 3-3.5M13 7.5h6M13 16.5h6" />,
+  rupee: <path d="M7 5h10M7 9h10M7 5c6 0 6 8 0 8h-1l7 7" />,
+  filter: <path d="M4 6h16M7 12h10M10 18h4" />,
+  close: <path d="M6 6l12 12M18 6L6 18" />,
 };
 
 export function Icon({ name, size = 24 }: { name: keyof typeof PATHS | string; size?: number }) {
@@ -44,6 +51,61 @@ const NAV = [
   { href: "/me", icon: "person", label: "navMe" },
 ] as const;
 
+export const LANG_LABEL: Record<Lang, string> = { en: "English", hi: "हिन्दी", kn: "ಕನ್ನಡ" };
+
+/**
+ * Always in the corner of every screen, written in each language's own script, so a person can
+ * find their language without being able to read the current one.
+ */
+export function LanguageSwitcher() {
+  const { t, effectiveLang, update } = useApp();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: PointerEvent) => {
+      if (box.current && !box.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  return (
+    <div className="lang-switch" ref={box}>
+      <button type="button" className="lang-button" aria-expanded={open} aria-label={t("changeLanguage")} onClick={() => setOpen((value) => !value)}>
+        <Icon name="globe" size={22} />
+        <span lang={effectiveLang}>{LANG_LABEL[effectiveLang]}</span>
+      </button>
+      {open && (
+        <div className="lang-menu" role="group" aria-label={t("changeLanguage")}>
+          {LANGS.map((lang) => (
+            <button
+              key={lang}
+              type="button"
+              lang={lang}
+              className="lang-option"
+              aria-pressed={lang === effectiveLang}
+              onClick={() => {
+                update({ lang });
+                setOpen(false);
+              }}
+            >
+              {LANG_LABEL[lang]}
+              {lang === effectiveLang && <Icon name="check" size={20} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Shell({ children }: { children: ReactNode }) {
   const { t } = useApp();
   const pathname = usePathname();
@@ -61,7 +123,10 @@ export function Shell({ children }: { children: ReactNode }) {
           );
         })}
       </nav>
-      <main className="main">{children}</main>
+      <main className="main">
+        <div className="topbar"><LanguageSwitcher /></div>
+        {children}
+      </main>
     </div>
   );
 }

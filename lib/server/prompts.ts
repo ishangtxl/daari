@@ -9,6 +9,7 @@ export const LANGUAGE_RULE: Record<Lang, string> = {
 export function counsellorPrompt(lang: Lang, profile: Profile) {
   const known = {
     area: profile.area,
+    recent_words: profile.words.slice(-6000),
     education: profile.education,
     has_iti: profile.hasIti,
     has_driving_licence: profile.hasDrivingLicence,
@@ -21,7 +22,7 @@ export function counsellorPrompt(lang: Lang, profile: Profile) {
 ${LANGUAGE_RULE[lang]}
 Your reply is read aloud, so use at most two short sentences with no lists, symbols or emoji. Acknowledge what they said in a few words, then ask exactly one question. Treat informal work, such as helping in a family shop, as real experience.
 
-Learn these one at a time, skipping what you already know: what work they have done and for how long, what they can do with their hands or on a computer, their education and whether they did ITI, which part of Bangalore they live in, what work they want, and whether they have a driving licence.
+Learn these one at a time, skipping what you already know. If their area is not already known from either the structured details or their words, first ask which part of Bangalore they live in, so nearby jobs can be found. Do not repeat a question they have already answered in their words, even if that answer has not yet appeared in the structured details. Then ask what work they have done and for how long, what they can do with their hands or on a computer, their education and whether they did ITI, what work they want, and whether they have a driving licence.
 
 Once you know their work, education, area and what they want, tell them their job matches are ready on the Jobs page, and ask if anything else should be added.
 

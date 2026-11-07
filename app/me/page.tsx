@@ -1,16 +1,16 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/components/app-state";
 import { mergeProfile } from "@/lib/profile";
 import { ErrorNote, Icon, Loading, ReadAloud, Shell } from "@/components/ui";
 import { errorKey, postForm, postJson, postRaw } from "@/lib/client/api";
-import { LANGS, type Lang, type Profile, type ResumeData } from "@/lib/types";
-
-const LANG_LABEL: Record<Lang, string> = { en: "English", hi: "हिन्दी", kn: "ಕನ್ನಡ" };
+import type { Profile, ResumeData } from "@/lib/types";
 
 export default function Me() {
   const { ready, t, effectiveLang, profile, resume, resumeReview, resumeRemoved, update, clear } = useApp();
+  const router = useRouter();
   const [busy, setBusy] = useState<"upload" | "build" | "pdf" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -113,6 +113,7 @@ export default function Me() {
         <input ref={fileInput} type="file" accept="application/pdf" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file); event.target.value = ""; }} />
         <div className="row-actions">
           <button type="button" className="btn btn-primary" disabled={busy !== null || !hasWork} onClick={build}>{t("buildResume")}</button>
+          <button type="button" className="btn btn-quiet" disabled={busy !== null} onClick={() => router.push("/talk?from=resume")}>{t("addMoreInfo")}</button>
           <button type="button" className="btn btn-quiet" disabled={busy !== null} onClick={() => fileInput.current?.click()}>{t("uploadResume")}</button>
         </div>
         {!hasWork && <p className="honest-note">{t("needWork")}</p>}
@@ -147,12 +148,6 @@ export default function Me() {
         )}
 
         <section className="settings">
-          <h2>{t("changeLanguage")}</h2>
-          <div className="language-row">
-            {LANGS.map((lang) => (
-              <button key={lang} type="button" lang={lang} className="btn btn-quiet" aria-pressed={lang === effectiveLang} onClick={() => update({ lang })}>{LANG_LABEL[lang]}</button>
-            ))}
-          </div>
           <button type="button" className="link-button danger" onClick={() => { if (window.confirm(t("clearConfirm"))) clear(); }}>{t("clearData")}</button>
         </section>
       </div>

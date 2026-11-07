@@ -5,7 +5,7 @@
 ## What it does
 
 - **Talk:** a counsellor you speak or type to, which learns your experience from your own words. Informal work counts.
-- **Jobs:** real Bangalore listings, ranked by fit. Each requirement is a stop on a route line, so "you meet 4 of 6" is checkable, not an invented percentage.
+- **Jobs:** real Bangalore listings, ranked by fit, with optional road-distance/salary filters and distance/eligibility/salary sorting. Eligibility sorting ranks jobs with every listed requirement met first, then one unmet requirement, two unmet requirements, and so on. Each requirement is a stop on a route line, so "you meet 4 of 6" is checkable, not an invented percentage.
 - **Places to ask:** many small shops never advertise online, so Daari finds local businesses and drafts a WhatsApp message and call script. These are labelled as not confirmed vacancies.
 - **Learn:** a plan for your gaps, using a verified list of NPTEL and SWAYAM courses plus YouTube searches.
 - **Apply:** a message for the employer, a call script, documents to carry, and spoken interview practice. You always apply yourself, and an application tracker follows up.
@@ -27,7 +27,7 @@ Profiles stay in the browser's local storage, and text is only sent to the serve
 
 ## Running it
 
-Create `.env` with:
+Copy `.env.example` to `.env` in this project root, then add your server-side keys:
 
 ```
 ZENMUX_API_KEY=
@@ -35,7 +35,8 @@ JEV_API_KEY=
 SARVAM_API_KEY=
 X_RAPIDAPI_KEY=
 X_RAPIDAPI_HOST=jsearch.p.rapidapi.com
-GOOGLE_PLACES_API_KEY=   # optional
+GOOGLE_PLACES_API_KEY=   # optional; used by Places to ask
+GOOGLE_ROUTES_API_KEY= # optional; server-side Routes API key, enables road-distance filters
 ```
 
 ```
@@ -50,7 +51,7 @@ pnpm dev
 | `pnpm scam-eval` | Runs the scam signals over hand-written examples and real listings |
 | `node scripts/e2e.mjs <url> <screenshot dir> <wav>` | Drives the whole app in a browser with real APIs, using a WAV file as the microphone |
 
-The job catalog is a snapshot, so run `pnpm catalog` to refresh it. `spikes/` holds the throwaway scripts behind the early API and model choices.
+The job catalog is a snapshot, so run `pnpm catalog` to refresh it. A job search evaluates at most 24 candidate listings. Road distances are fetched only after a customer selects a distance filter or nearest-first sorting. Within one request, the server groups jobs by normalized locality and sends each distinct destination only once. The browser keeps the returned distances in the current Jobs page state, so changing distance thresholds or switching between distance sort and distance filters reuses the same response for that page view. The distances are not persisted in a server cache or shared across customers: Google Maps Platform policies prohibit storing or indexing Routes/Distance Matrix distance results; the listed caching exceptions cover other specific values such as Place IDs and latitude/longitude, not road-distance results. The Routes API accepts address strings and resolves them internally, so this feature does not call the separate Geocoding API. Distances are approximate road distances between localities, not exact door-to-door commute distances. Salary thresholds require the listing's stated minimum monthly pay to be strictly above the selected amount; salary sorting uses that minimum pay as the comparable starting-salary figure. Keep the Routes API key server-side, restrict it to the Routes API, and apply an IP restriction for the production server where practical. `spikes/` holds the throwaway scripts behind the early API and model choices.
 
 ## Deployment
 
