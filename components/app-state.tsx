@@ -4,6 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { translate, type StringKey } from "@/lib/i18n";
 import { emptyProfile, type Lang, type MatchedJob, type Profile, type ResumeData } from "@/lib/types";
 
+// ── Auth user type (mirrors SessionPayload sub-fields returned by /api/auth/session) ──
+export type AuthUser = { id: string; name: string | null; provider: "phone" | "google" };
+
 export type ChatMessage = { id: string; role: "user" | "assistant"; content: string };
 export type ApplicationStatus = "statusApplied" | "statusCalled" | "statusInterview" | "statusOffer" | "statusNoReply";
 export type Application = { jobId: string; title: MatchedJob["title"]; employer: string; applyLink: string; status: ApplicationStatus; at: string };
@@ -18,6 +21,9 @@ export type PlanStep = {
 
 type Stored = {
   lang: Lang | null;
+  // NOTE: user is intentionally NOT persisted to localStorage — it is always
+  // re-hydrated from the server session cookie on mount so it stays in sync.
+  user: AuthUser | null;
   profile: Profile;
   messages: ChatMessage[];
   jobs: MatchedJob[] | null;
@@ -33,6 +39,7 @@ type Stored = {
 const KEY = "daari.v1";
 const initial = (): Stored => ({
   lang: null,
+  user: null,
   profile: emptyProfile(),
   messages: [],
   jobs: null,
@@ -51,6 +58,7 @@ type AppState = Stored & {
   update: (patch: Partial<Stored> | ((current: Stored) => Partial<Stored>)) => void;
   clear: () => void;
   effectiveLang: Lang;
+  signOut: () => Promise<void>;
 };
 
 const Context = createContext<AppState | null>(null);
@@ -69,14 +77,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     // Loading saved state in an effect keeps the first render identical to the server's.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (loaded) setStored({ ...initial(), ...loaded, profile: { ...emptyProfile(), ...loaded.profile } });
+    if (loaded) setStored({ ...initial(), ...loaded,
+      // Always start with user: null — the fetch below is the source of truth.
+      user: null,
+      profile: { ...emptyProfile(), ...loaded.profile },
+    });
     setReady(true);
+
+    // Hydrate auth session from the HttpOnly session cookie.
+    // Always runs on mount so navigating back to "/" after login picks it up.
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((body: { user: AuthUser | null }) => {
+        setStored((s) => ({ ...s, user: body.user ?? null }));
+      })
+      .catch(() => {/* session fetch failure is non-fatal */});
   }, []);
 
   useEffect(() => {
     if (!ready) return;
     try {
-      localStorage.setItem(KEY, JSON.stringify(stored));
+      // Exclude `user` from localStorage — it is always re-hydrated from the cookie.
+      const { user: _user, ...rest } = stored;
+      localStorage.setItem(KEY, JSON.stringify(rest));
     } catch {
       // Storage may be full or blocked, and nothing on screen depends on this write.
     }
@@ -95,9 +118,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setStored((current) => ({ ...initial(), lang: current.lang }));
   }, []);
 
+  const signOut = useCallback(async () => {
+    await fetch("/api/auth/signout", { method: "POST" }).catch(() => {});
+    setStored((current) => ({ ...current, user: null }));
+  }, []);
+
   const value = useMemo<AppState>(
-    () => ({ ...stored, ready, update, clear, effectiveLang, t: (key, values) => translate(effectiveLang, key, values) }),
-    [stored, ready, update, clear, effectiveLang],
+    () => ({ ...stored, ready, update, clear, signOut, effectiveLang, t: (key, values) => translate(effectiveLang, key, values) }),
+    [stored, ready, update, clear, signOut, effectiveLang],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
