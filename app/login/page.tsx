@@ -314,7 +314,7 @@ function LoginContent() {
               </p>
             </div>
           ) : (
-            <div className="intent-content-block">
+            <div className="intent-content-block" key={`settled-${replayCount}`}>
               <header className="intent-brand-header">
                 <div
                   className="login-brand-header"
@@ -337,7 +337,7 @@ function LoginContent() {
                 </h1>
               </header>
 
-              {/* Two Direct Bangalore Action Buttons (Clean, Solid, Tactile) */}
+              {/* Two Direct Bangalore Action Buttons (Clean, Solid White, Tactile) */}
               <div
                 className="intent-choices-grid"
                 role="group"
@@ -368,7 +368,7 @@ function LoginContent() {
                     setStage("phone");
                   }}
                 >
-                  <div className="intent-choice-icon intent-icon-emp" aria-hidden="true">
+                  <div className="intent-choice-icon" aria-hidden="true">
                     <Icon name="tool" size={26} />
                   </div>
                   <div className="intent-choice-text">

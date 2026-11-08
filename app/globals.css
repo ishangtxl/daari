@@ -471,9 +471,9 @@ body:has(dialog[open]) { overflow: hidden; }
 
 .intent-tree {
   position: absolute;
-  top: -16px;
-  right: -70px;
-  width: 260px;
+  top: -24px;
+  right: -36px;
+  width: clamp(360px, 92vw, 460px);
   opacity: 0.96;
   pointer-events: none;
   z-index: 1;
@@ -481,9 +481,9 @@ body:has(dialog[open]) { overflow: hidden; }
 
 @media (min-width: 900px) {
   .intent-tree {
-    top: -20px;
-    right: -80px;
-    width: 460px;
+    top: -30px;
+    right: -50px;
+    width: clamp(560px, 48vw, 740px);
   }
 }
 
@@ -644,30 +644,59 @@ body:has(dialog[open]) { overflow: hidden; }
   transform: scale(0.985);
 }
 
-/* 1. Job Seeker Button: Crisp Solid White with Deep Cobalt Ink */
-.intent-choice-seeker {
+/* Both Seeker & Employer Buttons: Crisp Solid White with Deep Cobalt Ink */
+.intent-choice-seeker,
+.intent-choice-employer {
   background: #ffffff;
   color: var(--cobalt-deep);
   border: 2px solid #ffffff;
   box-shadow: 0 6px 22px rgba(13, 30, 99, 0.28);
 }
 
-.intent-choice-seeker:hover {
-  box-shadow: 0 10px 30px rgba(13, 30, 99, 0.38);
-  border-color: var(--sky);
-}
-
-/* 2. Employer Button: Auto-Yellow with Deep Cobalt Ink */
-.intent-choice-employer {
-  background: var(--auto);
-  color: var(--cobalt-deep);
-  border: 2px solid var(--auto);
-  box-shadow: 0 6px 22px rgba(13, 30, 99, 0.28);
-}
-
+.intent-choice-seeker:hover,
 .intent-choice-employer:hover {
-  box-shadow: 0 10px 30px rgba(13, 30, 99, 0.38);
-  filter: brightness(1.04);
+  box-shadow: 0 12px 32px rgba(13, 30, 99, 0.38);
+  border-color: var(--sky);
+  transform: translateY(-3px);
+}
+
+.intent-choice-seeker:active,
+.intent-choice-employer:active {
+  transform: scale(0.985);
+  background: #f7f9fe;
+}
+
+/* ── Animated Staggered Entrance for Intent Cards ── */
+.intent-choice-seeker {
+  animation: intentCardIn 0.58s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+}
+
+.intent-choice-employer {
+  animation: intentCardIn 0.58s cubic-bezier(0.16, 1, 0.3, 1) 0.22s both;
+}
+
+@keyframes intentCardIn {
+  0% {
+    opacity: 0;
+    transform: translateY(44px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.006);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intent-choice-seeker,
+  .intent-choice-employer {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 .intent-choice-icon {
@@ -677,16 +706,8 @@ body:has(dialog[open]) { overflow: hidden; }
   height: 52px;
   border-radius: 12px;
   flex: none;
-}
-
-.intent-choice-seeker .intent-choice-icon {
   background: var(--sky);
   color: var(--cobalt);
-}
-
-.intent-choice-employer .intent-choice-icon {
-  background: rgba(13, 30, 99, 0.14);
-  color: var(--cobalt-deep);
 }
 
 .intent-choice-text {
@@ -710,10 +731,6 @@ body:has(dialog[open]) { overflow: hidden; }
   line-height: 1.35;
   color: #4a5470;
   font-weight: 500;
-}
-
-.intent-choice-employer .intent-choice-sub {
-  color: #2b334a;
 }
 
 /* ── Smooth Language Transition Across Entire Page ── */
