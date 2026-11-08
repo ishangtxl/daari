@@ -19,13 +19,63 @@ export type PlanStep = {
   course: { source: string; title: string; url: string } | null;
 };
 
+/** Role is permanent once chosen — seeker cannot become provider and vice versa. */
+export type UserRole = "job_seeker" | "job_provider";
+
+/** Draft job listing collected via voice or manual form — persisted so switching tabs preserves data. */
+export type ProviderJobDraft = {
+  businessName: string;
+  roleCategory: string;
+  customRoleName: string;
+  locality: string;
+  landmark: string;
+  salaryMin: number;
+  salaryMax: number;
+  vacancies: number;
+  requirements: string[];
+  customNotes: string;
+  whatsappContact: string;
+  proofType: string;
+  proofValue: string;
+};
+
+export type PostedListing = {
+  id: string;
+  title: string;
+  employer: string;
+  area: string;
+  salaryText: string;
+  status: "active" | "closed";
+  postedAt: string;
+};
+
+export function emptyDraft(): ProviderJobDraft {
+  return {
+    businessName: "",
+    roleCategory: "",
+    customRoleName: "",
+    locality: "",
+    landmark: "",
+    salaryMin: 16000,
+    salaryMax: 22000,
+    vacancies: 1,
+    requirements: [],
+    customNotes: "",
+    whatsappContact: "",
+    proofType: "none",
+    proofValue: "",
+  };
+}
+
 type Stored = {
   lang: Lang | null;
+  role: UserRole | null;
   // NOTE: user is intentionally NOT persisted to localStorage — it is always
   // re-hydrated from the server session cookie on mount so it stays in sync.
   user: AuthUser | null;
   profile: Profile;
   messages: ChatMessage[];
+  providerMessages: ChatMessage[];
   jobs: MatchedJob[] | null;
   roles: string[];
   jobsKey: string;
@@ -34,14 +84,18 @@ type Stored = {
   resume: ResumeData | null;
   resumeReview: string[];
   resumeRemoved: string[];
+  providerDraft: ProviderJobDraft;
+  postedListings: PostedListing[];
 };
 
 const KEY = "daari.v1";
 const initial = (): Stored => ({
   lang: null,
+  role: null,
   user: null,
   profile: emptyProfile(),
   messages: [],
+  providerMessages: [],
   jobs: null,
   roles: [],
   jobsKey: "",
@@ -50,6 +104,8 @@ const initial = (): Stored => ({
   resume: null,
   resumeReview: [],
   resumeRemoved: [],
+  providerDraft: emptyDraft(),
+  postedListings: [],
 });
 
 type AppState = Stored & {
@@ -81,6 +137,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Always start with user: null — the fetch below is the source of truth.
       user: null,
       profile: { ...emptyProfile(), ...loaded.profile },
+      providerDraft: { ...emptyDraft(), ...(loaded.providerDraft ?? {}), proofType: "none", proofValue: "" },
     });
     setReady(true);
 

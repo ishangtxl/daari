@@ -50,7 +50,7 @@ const SPLASH_ITEMS = [
 ];
 
 function LoginContent() {
-  const { ready, t, effectiveLang, update } = useApp();
+  const { ready, t, effectiveLang, update, role } = useApp();
   const router = useRouter();
   const params = useSearchParams();
 
@@ -58,11 +58,23 @@ function LoginContent() {
   const initialIntent: Intent =
     initialIntentParam === "post" || initialIntentParam === "employer" ? "employer" : "seeker";
   const [intent, setIntent] = useState<Intent>(initialIntent);
+  // Skip the intent screen if we already have a role stored (returning user / post-OAuth).
   const [stage, setStage] = useState<Stage>(initialIntentParam ? "phone" : "intent");
 
   const [splashPhase, setSplashPhase] = useState<"splash" | "popping" | "settled">(
     initialIntentParam ? "settled" : "splash",
   );
+
+  // Once the app state is ready, if a role is already stored jump past the intent screen.
+  useEffect(() => {
+    if (!ready) return;
+    if (role && stage === "intent") {
+      setSplashPhase("settled");
+      setStage("phone");
+      setIntent(role === "job_provider" ? "employer" : "seeker");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
   const [splashIndex, setSplashIndex] = useState(0);
   const [langFading, setLangFading] = useState(false);
 
@@ -448,6 +460,7 @@ function LoginContent() {
                   className="intent-choice-btn intent-choice-seeker"
                   onClick={() => {
                     setIntent("seeker");
+                    update({ role: "job_seeker" });
                     setStage("phone");
                   }}
                 >
@@ -465,6 +478,7 @@ function LoginContent() {
                   className="intent-choice-btn intent-choice-employer"
                   onClick={() => {
                     setIntent("employer");
+                    update({ role: "job_provider" });
                     setStage("phone");
                   }}
                 >

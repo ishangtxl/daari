@@ -33,11 +33,93 @@ function ChooseLanguage() {
   );
 }
 
+function ChooseRole() {
+  const { t, update } = useApp();
+  return (
+    <main className="welcome role-choice-screen">
+      <TabebuiaTree className="welcome-tree" tall />
+      <div className="welcome-body">
+        <h1 className="brand-mark">ದಾರಿ</h1>
+        <p className="role-choice-title">{t("roleChoiceTitle")}</p>
+        <div className="role-choice-list">
+          <button
+            type="button"
+            className="role-choice-card role-choice-seeker"
+            onClick={() => update({ role: "job_seeker" })}
+          >
+            <span className="role-choice-icon"><Icon name="briefcase" size={28} /></span>
+            <span className="role-choice-text">
+              <strong>{t("roleChoiceSeeker")}</strong>
+              <span>{t("roleChoiceSeekerSub")}</span>
+            </span>
+            <span className="role-choice-arrow"><Icon name="back" size={20} /></span>
+          </button>
+          <button
+            type="button"
+            className="role-choice-card role-choice-provider"
+            onClick={() => update({ role: "job_provider" })}
+          >
+            <span className="role-choice-icon role-icon-provider"><Icon name="tool" size={28} /></span>
+            <span className="role-choice-text">
+              <strong>{t("roleChoiceProvider")}</strong>
+              <span>{t("roleChoiceProviderSub")}</span>
+            </span>
+            <span className="role-choice-arrow"><Icon name="back" size={20} /></span>
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function ProviderHome() {
+  const { t, providerDraft, signOut } = useApp();
+  const hasDraft = Boolean(providerDraft.businessName || providerDraft.roleCategory || providerDraft.locality);
+  return (
+    <Shell>
+      <section className="hero hero-provider">
+        <TabebuiaTree className="hero-tree" tall />
+        <div className="hero-copy">
+          <h1>{hasDraft ? t("providerDraftSavedHint") : t("intentEmployerTitle")}</h1>
+          {!hasDraft && <p>{t("intentEmployerSub")}</p>}
+        </div>
+      </section>
+      <section className="home-links">
+        <Link href="/provider/talk" className="home-link">
+          <Icon name="mic" size={28} />
+          <span>{t("navProviderTalk")}</span>
+        </Link>
+        <Link href="/provider/listings" className="home-link">
+          <Icon name="list" size={28} />
+          <span>{t("navMyListings")}</span>
+        </Link>
+        <Link href="/provider/applicants" className="home-link">
+          <Icon name="users" size={28} />
+          <span>{t("navApplicants")}</span>
+        </Link>
+      </section>
+      <div style={{ padding: "0 16px 32px" }}>
+        <button
+          type="button"
+          className="link-button"
+          style={{ display: "flex", alignItems: "center", gap: 6 }}
+          onClick={async () => { await signOut(); window.location.href = "/login"; }}
+        >
+          <Icon name="person" size={16} />
+          {t("signOut")}
+        </button>
+      </div>
+    </Shell>
+  );
+}
+
 export default function Home() {
-  const { ready, lang, t, profile, jobs } = useApp();
+  const { ready, lang, role, t, profile, jobs } = useApp();
   const router = useRouter();
   if (!ready) return <main className="welcome" />;
   if (!lang) return <ChooseLanguage />;
+  if (!role) return <ChooseRole />;
+  if (role === "job_provider") return <ProviderHome />;
 
   const hasJobs = Boolean(jobs?.length);
   return (
@@ -72,10 +154,6 @@ export default function Home() {
         <Link href="/me" className="home-link">
           <Icon name="person" size={28} />
           <span>{t("homeResume")}</span>
-        </Link>
-        <Link href="/jobs/post" className="home-link">
-          <Icon name="tool" size={28} />
-          <span>{t("homePostJob")}</span>
         </Link>
       </section>
     </Shell>

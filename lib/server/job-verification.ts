@@ -164,7 +164,7 @@ export async function enrichJobWithAI(input: JobPostInput): Promise<{
 }> {
   const prompt = `You are Daari's multilingual job structuring engine for Bengaluru trade & vocational workers.
 Given the following direct employer posting, format the job title, a 1-sentence localized summary, and 3-5 concrete requirement stops.
-Output strictly in JSON matching the schema.
+Output strictly in JSON matching the schema. All string values must be on a single line with no embedded newlines.
 
 Business Name: ${input.businessName}
 Role Category: ${input.roleCategory}

@@ -1630,3 +1630,155 @@ body:has(dialog[open]) { overflow: hidden; }
   }
 }
 
+
+/* ── Role choice screen ── */
+.role-choice-screen .welcome-body { padding-top: 32px; }
+.role-choice-title { font-size: 20px; font-weight: 700; color: #fff; margin: 16px 0 10px; }
+.role-choice-list { display: grid; gap: 12px; margin-top: 4px; }
+.role-choice-card {
+  display: flex; align-items: center; gap: 14px; padding: 18px; border-radius: 14px;
+  background: #fff; border: 2px solid #fff; cursor: pointer; text-align: start;
+  transition: transform 140ms ease-out, box-shadow 140ms ease-out;
+  box-shadow: 0 4px 16px rgba(13,30,99,0.22);
+}
+.role-choice-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(13,30,99,0.32); }
+.role-choice-card:active { transform: scale(0.98); }
+.role-choice-icon {
+  display: grid; place-items: center; width: 52px; height: 52px; border-radius: 12px;
+  background: var(--sky); color: var(--cobalt); flex: none;
+}
+.role-icon-provider { background: #fff8e1; color: #b26a00; }
+.role-choice-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.role-choice-text strong { font-size: 18px; font-weight: 800; color: var(--cobalt-deep); }
+.role-choice-text span { font-size: 13px; color: #4a5470; line-height: 1.4; }
+.role-choice-arrow { color: var(--muted); transform: rotate(180deg); flex: none; }
+
+/* ── Provider hero ── */
+.hero-provider { background: linear-gradient(135deg, var(--cobalt-deep) 0%, #2a4bbd 100%); }
+
+/* ── Provider Talk page: manual fill bottom sheet ── */
+.sheet-backdrop {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(13, 30, 99, 0.45);
+  animation: fadeInBg 180ms ease;
+}
+@keyframes fadeInBg { from { opacity: 0; } to { opacity: 1; } }
+
+.manual-sheet {
+  position: fixed; inset-inline: 0; bottom: 0; z-index: 50;
+  max-height: 82dvh;
+  background: var(--paper);
+  border-radius: 20px 20px 0 0;
+  border-top: 2px solid var(--cobalt);
+  display: flex; flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+  /* keep it rendered but off-screen so CSS transition works */
+  pointer-events: none;
+}
+.manual-sheet-open {
+  transform: translateY(0);
+  pointer-events: auto;
+  box-shadow: 0 -8px 40px rgba(13, 30, 99, 0.18);
+}
+
+.sheet-handle-row {
+  display: flex; justify-content: center; align-items: center;
+  padding: 10px 16px 4px; position: relative; flex: none;
+}
+.sheet-handle {
+  width: 40px; height: 5px; border-radius: 999px; background: var(--line);
+}
+.sheet-close-btn {
+  position: absolute; right: 12px; top: 6px;
+  display: grid; place-items: center; width: 36px; height: 36px;
+  border-radius: 50%; border: none; background: var(--sky); color: var(--cobalt);
+  cursor: pointer;
+}
+.sheet-title {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 800; font-size: 17px; color: var(--cobalt);
+  padding: 4px 18px 12px; flex: none;
+  border-bottom: 1px solid var(--line);
+}
+.sheet-body {
+  flex: 1; overflow-y: auto; overscroll-behavior: contain;
+  padding: 16px 18px 24px; display: flex; flex-direction: column; gap: 14px;
+}
+/* Chip row inside sheet */
+.manual-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.manual-salary-row { display: flex; align-items: flex-end; gap: 10px; }
+.manual-salary-row .field { flex: 1; }
+.manual-fill-save { width: 100%; justify-content: center; margin-top: 4px; }
+
+/* dock actions row: type/talk + fill buttons side by side */
+.dock-actions-row {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+}
+.dock-fill-btn {
+  color: var(--cobalt); font-weight: 700; border: 1.5px solid var(--cobalt);
+  border-radius: 999px; padding: 4px 14px; background: var(--sky);
+}
+
+/* ── Provider draft status banner (in talk page) ── */
+.provider-draft-status {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 16px; border-radius: 10px; font-weight: 600; font-size: 16px;
+  margin-top: 8px;
+}
+.provider-draft-status.is-partial { background: #fff8e1; color: #7a5500; }
+.provider-draft-status.is-ready { background: var(--clear-wash); color: var(--met); }
+.provider-go-btn { margin-left: auto; font-size: 15px; min-height: 44px; white-space: nowrap; }
+
+/* ── Provider listings page ── */
+.provider-draft-tab, .provider-listings-tab { display: flex; flex-direction: column; gap: 20px; padding-top: 16px; }
+.draft-preview-card {
+  background: var(--paper); border: 2px solid var(--cobalt); border-radius: 16px;
+  padding: 20px 18px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 4px 16px rgba(13,30,99,0.08);
+}
+.draft-preview-header { display: flex; gap: 8px; align-items: center; }
+.draft-preview-title { font-size: 22px; font-weight: 800; color: var(--ink); margin: 0; }
+.draft-preview-employer { color: var(--muted); font-size: 16px; margin: -4px 0 0; }
+.draft-preview-details { display: flex; flex-wrap: wrap; gap: 10px; }
+.draft-detail { display: inline-flex; align-items: center; gap: 5px; font-size: 15px; color: var(--muted); font-weight: 600; }
+.draft-reqs { display: flex; flex-wrap: wrap; gap: 8px; }
+.draft-notes { font-size: 15px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+.provider-post-btn { width: 100%; min-height: 56px; font-size: 18px; justify-content: center; }
+.provider-missing-banner {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 14px 16px; border-radius: 10px; background: #fff8e1; color: #7a5500; font-weight: 600; font-size: 15px;
+}
+.provider-missing-banner .btn { margin-left: auto; font-size: 14px; min-height: 40px; }
+.listings-section { display: flex; flex-direction: column; gap: 10px; }
+.listings-section-title { font-size: 18px; font-weight: 700; color: var(--muted); padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.listings-grid { display: flex; flex-direction: column; gap: 12px; }
+.listing-card {
+  background: var(--paper); border-radius: 14px; padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 8px; border: 2px solid var(--line);
+}
+.listing-active { border-color: var(--cobalt); box-shadow: 0 3px 12px rgba(27,59,179,0.08); }
+.listing-closed { opacity: 0.65; }
+.listing-card-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.listing-card-meta { display: flex; align-items: center; gap: 10px; }
+.listing-status-badge { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 10px; border-radius: 999px; }
+.badge-active { background: var(--clear-wash); color: var(--met); }
+.badge-closed { background: var(--sky); color: var(--muted); }
+.listing-card-date { font-size: 13px; color: var(--muted); }
+.listing-card-actions { display: flex; gap: 8px; align-items: center; }
+.listing-close-btn { min-height: 38px; padding: 4px 12px; font-size: 14px; border: 1.5px solid var(--warn); color: var(--warn); background: #fff8f8; border-radius: 8px; display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 700; }
+.listing-close-btn:hover { background: var(--warn-wash); }
+.listing-remove-btn { min-height: 34px; padding: 3px 10px; font-size: 13px; border: 1.5px solid var(--line); color: var(--muted); background: none; border-radius: 8px; display: flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 600; }
+.listing-remove-btn:hover { background: var(--sky); color: var(--warn); border-color: var(--warn); }
+.listing-card-title { font-size: 19px; font-weight: 800; margin: 0; }
+.listing-card-employer { color: var(--muted); font-size: 15px; margin: -2px 0 0; }
+.listing-card-details { display: flex; flex-wrap: wrap; gap: 12px; }
+.listing-card-details span { display: inline-flex; align-items: center; gap: 5px; font-size: 15px; color: var(--muted); font-weight: 600; }
+
+/* Tab dot indicator */
+.tab-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; }
+.tab-dot-warn { background: #e59400; }
+
+/* Provider nav has fewer items — adjust grid */
+.shell-provider .nav { grid-template-columns: repeat(4, 1fr); }

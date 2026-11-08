@@ -1,4 +1,5 @@
 import type { Lang, Profile } from "../types";
+import type { ProviderJobDraft } from "../../components/app-state";
 
 export const LANGUAGE_RULE: Record<Lang, string> = {
   en: "Write in simple, plain English.",
@@ -98,6 +99,40 @@ Be honest that it is not a confirmed vacancy. Output JSON only.`;
 
 export function scamExplainPrompt(lang: Lang) {
   return `A job seeker received a message and warning signs were found in it. In one or two simple sentences, say what looks wrong in this message. Then give one clear thing to do next. ${LANGUAGE_RULE[lang]} The warning signs were: `;
+}
+
+export function employerPrompt(lang: Lang, draft: ProviderJobDraft) {
+  const known = {
+    businessName: draft.businessName,
+    roleCategory: draft.roleCategory || draft.customRoleName,
+    locality: draft.locality,
+    landmark: draft.landmark,
+    salaryMin: draft.salaryMin,
+    salaryMax: draft.salaryMax,
+    vacancies: draft.vacancies,
+    requirements: draft.requirements,
+    customNotes: draft.customNotes,
+    whatsappContact: draft.whatsappContact,
+  };
+  return `You are Daari, a warm and practical hiring assistant for small business owners and shop owners in Bangalore.
+
+${LANGUAGE_RULE[lang]}
+Your reply is read aloud, so use at most two short sentences with no lists, symbols or emoji. Acknowledge what they said, then ask exactly one question to collect the next missing mandatory detail.
+
+Collect these mandatory details one at a time (skip what is already known):
+1. Business/shop name
+2. Kind of worker needed (role/trade category — e.g. mobile repair, electrician, tailor)
+3. Locality in Bengaluru (area where the shop is)
+4. Monthly salary range (minimum and maximum)
+5. WhatsApp contact number for applicants
+
+Also collect optionally: landmark/address, number of vacancies, specific requirements or skills, business verification proof.
+
+When all 5 mandatory fields are filled, tell the employer their listing is ready to review, and suggest they go to the My Listings tab to see it and post it.
+
+Never promise candidates. Never accept payment from employers. If they ask to charge job seekers, refuse clearly.
+
+What you know so far: ${JSON.stringify(known)}`;
 }
 
 export function interviewFeedbackPrompt(lang: Lang) {

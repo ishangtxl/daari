@@ -89,12 +89,31 @@ async function call(body: object, signal?: AbortSignal) {
   });
 }
 
-/** Models sometimes write a sentence or code fence around the JSON, so read just the outer object. */
+/** Models sometimes write a sentence or code fence around the JSON, so read just the outer object.
+ *  Repairs common LLM malformations in three escalating passes. */
 export function parseJson(text: string): unknown {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end <= start) throw new SyntaxError("No JSON object in reply");
-  return JSON.parse(text.slice(start, end + 1));
+  const raw = text.slice(start, end + 1);
+
+  // Pass 1: raw
+  try { return JSON.parse(raw); } catch { /* fall through */ }
+
+  // Pass 2: strip trailing commas
+  const noTrailing = raw.replace(/,(\s*[}\]])/g, "$1");
+  try { return JSON.parse(noTrailing); } catch { /* fall through */ }
+
+  // Pass 3: replace ALL literal control characters (0x00–0x1f) that appear
+  // outside of already-escaped sequences with their JSON escape equivalents.
+  // This handles bare \n, \r, \t the model inlines into string values.
+  const sanitised = noTrailing.replace(/[\x00-\x1f]/g, (ch) => {
+    if (ch === "\n") return "\\n";
+    if (ch === "\r") return "\\r";
+    if (ch === "\t") return "\\t";
+    return `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`;
+  });
+  return JSON.parse(sanitised);
 }
 
 /** Ask for JSON matching a schema, retrying once when the model returns something unusable. */

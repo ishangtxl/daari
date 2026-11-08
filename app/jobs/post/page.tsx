@@ -61,7 +61,7 @@ export default function PostJobPage() {
   const [customReqs, setCustomReqs] = useState<string[]>([]);
   const [newReqInput, setNewReqInput] = useState("");
   const [customNotes, setCustomNotes] = useState("");
-  const [proofType, setProofType] = useState<BusinessProofType>("merchant_upi");
+  const [proofType, setProofType] = useState<BusinessProofType>("none");
   const [proofValue, setProofValue] = useState("");
   const [whatsappContact, setWhatsappContact] = useState(user?.id ?? "");
 
