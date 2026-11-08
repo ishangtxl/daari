@@ -73,6 +73,7 @@ function LoginContent() {
   const [problem, setProblem] = useState<string | null>(null);
 
   const confirmRef = useRef<ConfirmationResult | null>(null);
+  const otpTokenRef = useRef<string | null>(null);
   const codeRef = useRef<HTMLInputElement>(null);
   // Keep the verifier in a ref — never on window — so each mount gets its own instance.
   const verifierRef = useRef<RecaptchaVerifier | null>(null);
@@ -86,9 +87,7 @@ function LoginContent() {
     if (err) setProblem(t("loginError"));
   }, [params, t]);
 
-  // Create a new RecaptchaVerifier whenever the captcha container remounts.
-  // The container remounts when captchaKey changes (after an error reset) or on
-  // initial mount. We do NOT call render() here — signInWithPhoneNumber does it.
+  // Create a new RecaptchaVerifier whenever the captcha container remounts or stage changes.
   useEffect(() => {
     if (!ready) return;
     if (!firebaseConfigured) return;
@@ -100,22 +99,24 @@ function LoginContent() {
       verifierRef.current = null;
     }
 
-    verifierRef.current = new RecaptchaVerifier(
-      firebaseAuth,
-      captchaContainerRef.current,
-      { size: "invisible" },
-    );
+    try {
+      verifierRef.current = new RecaptchaVerifier(
+        firebaseAuth,
+        captchaContainerRef.current,
+        { size: "invisible" },
+      );
+    } catch (err) {
+      console.error("[login] Failed to create RecaptchaVerifier", err);
+    }
 
     return () => {
-      // Cleanup on unmount (navigation away from /login).
+      // Cleanup on unmount.
       if (verifierRef.current) {
         try { verifierRef.current.clear(); } catch { /* ignore */ }
         verifierRef.current = null;
       }
     };
-  // captchaKey in deps so the effect re-runs with a fresh div after resetVerifier().
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, captchaKey]);
+  }, [ready, captchaKey, stage]);
 
   const [replayCount, setReplayCount] = useState(0);
 
@@ -184,7 +185,7 @@ function LoginContent() {
     setCaptchaKey((k) => k + 1);
   }
 
-  // ── Step 1: send OTP via Firebase ──────────────────────────────────────────
+  // ── Step 1: send OTP via Firebase (with dev fallback for local testing) ────
 
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault();
@@ -199,55 +200,152 @@ function LoginContent() {
         ? `+${digits}`
         : `+91${digits.slice(-10)}`;
 
-    if (!verifierRef.current) {
-      setProblem(t("loginError"));
-      return;
+    // Ensure RecaptchaVerifier is initialized if container is available
+    if (!verifierRef.current && captchaContainerRef.current && firebaseConfigured) {
+      try {
+        verifierRef.current = new RecaptchaVerifier(
+          firebaseAuth,
+          captchaContainerRef.current,
+          { size: "invisible" },
+        );
+      } catch (err) {
+        console.error("[login] Failed to initialize RecaptchaVerifier on demand", err);
+      }
     }
 
     setBusy(true);
     setProblem(null);
     setNotice(null);
 
-    try {
-      const result = await signInWithPhoneNumber(firebaseAuth, e164, verifierRef.current);
-      confirmRef.current = result;
-      setStage("otp");
-      setNotice(t("loginOtpSent"));
-      setTimeout(() => codeRef.current?.focus(), 80);
-    } catch (err: unknown) {
-      console.error("[login] signInWithPhoneNumber failed", err);
-      // After any error the verifier is in an unknown state — replace it entirely.
-      resetVerifier();
-      const fbCode = (err as { code?: string }).code ?? "";
-      if (fbCode === "auth/invalid-phone-number") {
-        setProblem(t("loginError"));
-      } else if (fbCode === "auth/too-many-requests") {
-        setProblem(t("tooMany"));
-      } else {
-        setProblem(t("loginError"));
+    // Try Firebase Phone Auth first
+    if (firebaseConfigured && verifierRef.current) {
+      try {
+        const result = await signInWithPhoneNumber(firebaseAuth, e164, verifierRef.current);
+        confirmRef.current = result;
+        otpTokenRef.current = null;
+        setStage("otp");
+        setNotice(t("loginOtpSent"));
+        setTimeout(() => codeRef.current?.focus(), 80);
+        setBusy(false);
+        return;
+      } catch (err: unknown) {
+        console.error("[login] Firebase signInWithPhoneNumber failed", err);
+        resetVerifier();
+
+        // In non-production, fall back to local dev OTP so testing with numbers like 8888888888 works immediately!
+        if (process.env.NODE_ENV !== "production") {
+          try {
+            console.warn(`[login] Attempting local dev OTP fallback for ${digits.slice(-10)}`);
+            const devRes = await postJson<{ otpToken: string; expiresIn: number; devOtp?: string }>(
+              "/api/auth/otp/send",
+              { phone: digits.slice(-10) },
+            );
+            otpTokenRef.current = devRes.otpToken;
+            confirmRef.current = null;
+            setStage("otp");
+            if (devRes.devOtp) {
+              setCode(devRes.devOtp);
+              setNotice(`${t("loginOtpSent")} (Code: ${devRes.devOtp})`);
+            } else {
+              setNotice(t("loginOtpSent"));
+            }
+            setTimeout(() => codeRef.current?.focus(), 80);
+            setBusy(false);
+            return;
+          } catch (devErr) {
+            console.error("[login] Dev OTP fallback also failed", devErr);
+          }
+        }
+
+        const fbCode = (err as { code?: string }).code ?? "";
+        const fbMsg = (err as { message?: string }).message ?? "";
+        if (fbCode === "auth/invalid-phone-number") {
+          setProblem("Invalid mobile number. Please enter a valid 10-digit number.");
+        } else if (fbCode === "auth/too-many-requests") {
+          setProblem(t("tooMany"));
+        } else if (fbCode === "auth/quota-exceeded") {
+          setProblem("SMS quota exceeded. Add this phone number under Firebase Authentication → Sign-in method → Phone numbers for testing.");
+        } else if (fbCode === "auth/billing-not-enabled") {
+          setProblem("SMS delivery requires Firebase Blaze plan or adding this number to Firebase 'Phone numbers for testing'.");
+        } else if (fbCode === "auth/operation-not-allowed") {
+          setProblem("Phone authentication is not enabled in Firebase Console. Please enable Phone provider in Authentication settings.");
+        } else if (fbCode === "auth/app-not-authorized") {
+          setProblem("Domain not authorized in Firebase Console. Add localhost to Authorized Domains in Firebase Authentication.");
+        } else {
+          setProblem(fbMsg || t("loginError"));
+        }
+        setBusy(false);
+        return;
       }
-    } finally {
-      setBusy(false);
     }
+
+    // If Firebase is not configured but in development mode, use local dev OTP directly
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        const devRes = await postJson<{ otpToken: string; expiresIn: number; devOtp?: string }>(
+          "/api/auth/otp/send",
+          { phone: digits.slice(-10) },
+        );
+        otpTokenRef.current = devRes.otpToken;
+        confirmRef.current = null;
+        setStage("otp");
+        if (devRes.devOtp) {
+          setCode(devRes.devOtp);
+          setNotice(`${t("loginOtpSent")} (Code: ${devRes.devOtp})`);
+        } else {
+          setNotice(t("loginOtpSent"));
+        }
+        setTimeout(() => codeRef.current?.focus(), 80);
+      } catch (err) {
+        console.error("[login] Dev OTP failed", err);
+        setProblem(t("loginError"));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
+    setProblem(t("loginError"));
+    setBusy(false);
   }
 
-  // ── Step 2: verify OTP, exchange Firebase ID token for session cookie ───────
+  // ── Step 2: verify OTP, exchange for session cookie ─────────────────────────
 
   async function verifyOtp(e: React.FormEvent) {
     e.preventDefault();
-    if (!confirmRef.current) return;
+    if (!confirmRef.current && !otpTokenRef.current) return;
     setBusy(true);
     setProblem(null);
 
     try {
-      const credential = await confirmRef.current.confirm(code.trim());
-      const idToken = await credential.user.getIdToken();
-      const { user } = await postJson<{ ok: boolean; user: { phone: string; provider: "phone" } }>("/api/auth/firebase", { idToken });
+      let userPhone: string;
+      if (confirmRef.current) {
+        const credential = await confirmRef.current.confirm(code.trim());
+        const idToken = await credential.user.getIdToken();
+        const { user } = await postJson<{ ok: boolean; user: { phone: string; provider: "phone" } }>(
+          "/api/auth/firebase",
+          { idToken },
+        );
+        userPhone = user.phone;
+      } else if (otpTokenRef.current) {
+        const { user } = await postJson<{ ok: boolean; user: { phone: string; provider: "phone" } }>(
+          "/api/auth/otp/verify",
+          {
+            otpToken: otpTokenRef.current,
+            code: code.trim(),
+          },
+        );
+        userPhone = user.phone;
+      } else {
+        throw new Error("No active verification session");
+      }
+
       // Update app-state immediately so the nav bar flips to "Sign out" before redirect.
-      update({ user: { id: user.phone, name: null, provider: "phone" } });
+      update({ user: { id: userPhone, name: null, provider: "phone" } });
       const destination = intent === "employer" ? "/jobs/post" : (params.get("redirect") || "/");
       router.replace(destination);
     } catch (err: unknown) {
+      console.error("[login] OTP verification failed", err);
       const fbCode = (err as { code?: string }).code ?? "";
       if (fbCode === "auth/invalid-verification-code") {
         setProblem(t("loginWrongOtp"));
@@ -256,6 +354,7 @@ function LoginContent() {
         setStage("phone");
         setCode("");
         confirmRef.current = null;
+        otpTokenRef.current = null;
         resetVerifier();
       } else {
         setProblem(t("loginError"));
@@ -269,6 +368,7 @@ function LoginContent() {
     setStage("phone");
     setCode("");
     confirmRef.current = null;
+    otpTokenRef.current = null;
     setProblem(null);
     setNotice(null);
     resetVerifier();

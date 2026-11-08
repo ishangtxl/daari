@@ -82,9 +82,13 @@ export async function POST(req: Request) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       console.error("[auth/otp/send] Fast2SMS error", err);
-      return NextResponse.json({ error: "sms_failed" }, { status: 502 });
+      if (isProd) {
+        return NextResponse.json({ error: "sms_failed" }, { status: 502 });
+      }
+      // In development mode, fall through to dev demo OTP so testing never breaks.
+    } else {
+      return NextResponse.json({ otpToken, expiresIn });
     }
-    return NextResponse.json({ otpToken, expiresIn });
   }
 
   // ── 3. Dev / demo mode ─────────────────────────────────────────────────────
