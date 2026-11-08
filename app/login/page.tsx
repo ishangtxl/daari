@@ -24,18 +24,12 @@ import {
 } from "firebase/auth";
 import { firebaseAuth, firebaseConfigured } from "@/lib/firebase-client";
 import { useApp } from "@/components/app-state";
-import { Icon, Shell, TabebuiaTree } from "@/components/ui";
+import { Icon, LanguageSwitcher, Shell, TabebuiaTree } from "@/components/ui";
 import { postJson } from "@/lib/client/api";
 import type { Lang } from "@/lib/types";
 
 type Stage = "intent" | "phone" | "otp";
 type Intent = "seeker" | "employer";
-
-const LANGUAGE_CHOICES: { lang: Lang; label: string }[] = [
-  { lang: "kn", label: "ಕನ್ನಡ" },
-  { lang: "hi", label: "हिन्दी" },
-  { lang: "en", label: "English" },
-];
 
 const SPLASH_ITEMS = [
   {
@@ -125,7 +119,7 @@ function LoginContent() {
 
   const [replayCount, setReplayCount] = useState(0);
 
-  // Splash animation timer: Kannada (0) -> Hindi (1) -> English (2) -> Popping -> Settled
+  // Splash animation timer: Kannada (0) -> Hindi (1) -> English (2) -> Settled (fast & snappy)
   useEffect(() => {
     if (splashPhase === "settled") return;
 
@@ -138,25 +132,20 @@ function LoginContent() {
 
     const timer1 = setTimeout(() => {
       setSplashIndex(1);
-    }, 1350);
+    }, 800);
 
     const timer2 = setTimeout(() => {
       setSplashIndex(2);
-    }, 2700);
+    }, 1600);
 
     const timer3 = setTimeout(() => {
-      setSplashPhase("popping");
-    }, 4050);
-
-    const timer4 = setTimeout(() => {
       setSplashPhase("settled");
-    }, 4950);
+    }, 2400);
 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(timer3);
-      clearTimeout(timer4);
     };
   }, [replayCount]);
 
@@ -169,18 +158,16 @@ function LoginContent() {
     setReplayCount((c) => c + 1);
   }
 
-  function handleLangChange(newLang: Lang) {
-    if (newLang === effectiveLang || langFading) return;
-    setLangFading(true);
-    setTimeout(() => {
-      update({ lang: newLang });
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          setLangFading(false);
-        }, 60);
-      });
-    }, 180);
-  }
+  // Smooth cross-fade when language changes
+  const prevLangRef = useRef(effectiveLang);
+  useEffect(() => {
+    if (prevLangRef.current !== effectiveLang) {
+      setLangFading(true);
+      const timer = setTimeout(() => setLangFading(false), 240);
+      prevLangRef.current = effectiveLang;
+      return () => clearTimeout(timer);
+    }
+  }, [effectiveLang]);
 
   if (!ready) return null;
 
@@ -291,140 +278,107 @@ function LoginContent() {
 
   if (stage === "intent") {
     return (
-      <div className={`daari-splash-container splash-phase-${splashPhase}`}>
-        {/* Circular blue wave and pop-out to white */}
-        {splashPhase === "popping" && <div className="splash-circle-pulse" />}
-        {(splashPhase === "popping" || splashPhase === "settled") && (
-          <div className={`splash-white-burst ${splashPhase === "settled" ? "settled" : ""}`} />
-        )}
+      <div
+        className={`intent-viewport ${splashPhase === "splash" ? "splash-active" : "splash-settled"}`}
+        lang={effectiveLang}
+      >
+        {/* Animated Tabebuia Tree */}
+        <TabebuiaTree className="intent-tree" tall />
 
-        {splashPhase === "splash" && (
-          <button
-            type="button"
-            className="splash-skip-btn"
-            onClick={skipSplash}
-            aria-label="Skip intro animation"
-          >
-            Skip →
-          </button>
-        )}
-
-        <main
-          className={`intent-screen lang-smooth-transition ${langFading ? "fading" : ""}`}
-          lang={effectiveLang}
-        >
-          <header className={`intent-header header-${splashPhase}`}>
-            <div
-              className="intent-brand-header"
-              onClick={splashPhase === "settled" ? replaySplash : skipSplash}
-              title={splashPhase === "settled" ? "Replay intro" : "Skip intro"}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  if (splashPhase === "settled") replaySplash();
-                  else skipSplash();
-                }
-              }}
+        {/* Top bar with Language Switcher and Skip button */}
+        <div className="intent-topbar">
+          {splashPhase === "splash" && (
+            <button
+              type="button"
+              className="splash-skip-btn"
+              onClick={skipSplash}
+              aria-label="Skip intro animation"
             >
-              <span className="intent-brand-mark">
-                {splashPhase === "splash"
-                  ? SPLASH_ITEMS[splashIndex].mark
-                  : effectiveLang === "kn"
-                    ? "ದಾರಿ"
-                    : effectiveLang === "hi"
-                      ? "दारी"
-                      : "Daari"}
-              </span>
-            </div>
+              Skip →
+            </button>
+          )}
+          <LanguageSwitcher />
+        </div>
 
-            {splashPhase === "splash" ? (
-              <p key={`sub-${splashIndex}`} className="splash-subtitle-text">
+        {/* Main Content Area */}
+        <main
+          className={`intent-main lang-smooth-transition ${langFading ? "fading" : ""}`}
+        >
+          {splashPhase === "splash" ? (
+            <div className="splash-center-block">
+              <span className="splash-brand-mark" key={`mark-${splashIndex}`}>
+                {SPLASH_ITEMS[splashIndex].mark}
+              </span>
+              <p className="splash-sub-text" key={`sub-${splashIndex}`}>
                 {SPLASH_ITEMS[splashIndex].sub}
               </p>
-            ) : (
-              <h1 className="intent-tagline">
-                {t("loginHeroTitle")}
-              </h1>
-            )}
-
-            <div
-              className={`small-lang-picker ${splashPhase === "settled" ? "revealed" : splashPhase === "popping" ? "revealing" : "hidden"}`}
-              role="radiogroup"
-              aria-label={t("chooseLanguage")}
-            >
-              {LANGUAGE_CHOICES.map((choice) => {
-                const isSelected = effectiveLang === choice.lang;
-                return (
-                  <button
-                    key={choice.lang}
-                    type="button"
-                    role="radio"
-                    aria-checked={isSelected}
-                    lang={choice.lang}
-                    className={`lang-pill ${isSelected ? "lang-pill-active" : ""}`}
-                    onClick={() => handleLangChange(choice.lang)}
-                  >
-                    <span>{choice.label}</span>
-                  </button>
-                );
-              })}
             </div>
-          </header>
+          ) : (
+            <div className="intent-content-block">
+              <header className="intent-brand-header">
+                <div
+                  className="login-brand-header"
+                  role="button"
+                  tabIndex={0}
+                  onClick={replaySplash}
+                  title="Replay intro animation"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") replaySplash();
+                  }}
+                >
+                  <span className="login-brand-mark">
+                    {effectiveLang === "kn" ? "ದಾರಿ" : effectiveLang === "hi" ? "दारी" : "Daari"}
+                  </span>
+                  <span className="login-brand-sub">Daari · ದಾರಿ · दारी</span>
+                </div>
 
-          <div
-            className={`intent-options-grid ${splashPhase === "settled" ? "revealed" : splashPhase === "popping" ? "revealing" : "hidden"}`}
-            role="group"
-            aria-label={t("intentQuestion")}
-          >
-            <button
-              type="button"
-              className="intent-option-card intent-option-seeker"
-              onClick={() => {
-                setIntent("seeker");
-                setStage("phone");
-              }}
-            >
-              <div className="intent-option-top">
-                <span className="intent-option-icon" aria-hidden="true">
-                  <Icon name="briefcase" size={26} />
-                </span>
-                <span className="intent-option-badge">{t("intentSeekerBadge")}</span>
-              </div>
-              <div className="intent-option-body">
-                <h2 className="intent-option-title">{t("intentSeekerTitle")}</h2>
-                <p className="intent-option-sub">{t("intentSeekerSub")}</p>
-              </div>
-              <div className="intent-option-action" aria-hidden="true">
-                <span>{t("navLogin")}</span>
-                <span className="intent-arrow">→</span>
-              </div>
-            </button>
+                <h1 className="login-hero-title">
+                  {t("loginHeroTitle")}
+                </h1>
+              </header>
 
-            <button
-              type="button"
-              className="intent-option-card intent-option-employer"
-              onClick={() => {
-                setIntent("employer");
-                setStage("phone");
-              }}
-            >
-              <div className="intent-option-top">
-                <span className="intent-option-icon intent-icon-emp" aria-hidden="true">
-                  <Icon name="tool" size={26} />
-                </span>
-                <span className="intent-option-badge intent-badge-emp">{t("intentEmployerBadge")}</span>
+              {/* Two Direct Bangalore Action Buttons (Clean, Solid, Tactile) */}
+              <div
+                className="intent-choices-grid"
+                role="group"
+                aria-label={t("intentQuestion")}
+              >
+                <button
+                  type="button"
+                  className="intent-choice-btn intent-choice-seeker"
+                  onClick={() => {
+                    setIntent("seeker");
+                    setStage("phone");
+                  }}
+                >
+                  <div className="intent-choice-icon" aria-hidden="true">
+                    <Icon name="briefcase" size={26} />
+                  </div>
+                  <div className="intent-choice-text">
+                    <span className="intent-choice-title">{t("intentSeekerTitle")}</span>
+                    <span className="intent-choice-sub">{t("intentSeekerSub")}</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="intent-choice-btn intent-choice-employer"
+                  onClick={() => {
+                    setIntent("employer");
+                    setStage("phone");
+                  }}
+                >
+                  <div className="intent-choice-icon intent-icon-emp" aria-hidden="true">
+                    <Icon name="tool" size={26} />
+                  </div>
+                  <div className="intent-choice-text">
+                    <span className="intent-choice-title">{t("intentEmployerTitle")}</span>
+                    <span className="intent-choice-sub">{t("intentEmployerSub")}</span>
+                  </div>
+                </button>
               </div>
-              <div className="intent-option-body">
-                <h2 className="intent-option-title">{t("intentEmployerTitle")}</h2>
-                <p className="intent-option-sub">{t("intentEmployerSub")}</p>
-              </div>
-              <div className="intent-option-action intent-action-emp" aria-hidden="true">
-                <span>{t("postJobButton")}</span>
-                <span className="intent-arrow">→</span>
-              </div>
-            </button>
-          </div>
+            </div>
+          )}
         </main>
       </div>
     );
@@ -446,29 +400,6 @@ function LoginContent() {
 
             <div className="login-hero-block">
               <h1 className="login-hero-title">{t("loginHeroTitle")}</h1>
-            </div>
-
-            <div className="login-highlights" role="list">
-              <div className="login-highlight-item" role="listitem">
-                <span className="login-highlight-icon" aria-hidden="true">
-                  <Icon name="mic" size={16} />
-                </span>
-                <span className="login-highlight-title">{t("loginFeature1Title")}</span>
-              </div>
-
-              <div className="login-highlight-item" role="listitem">
-                <span className="login-highlight-icon" aria-hidden="true">
-                  <Icon name="tool" size={16} />
-                </span>
-                <span className="login-highlight-title">{t("loginFeature2Title")}</span>
-              </div>
-
-              <div className="login-highlight-item" role="listitem">
-                <span className="login-highlight-icon" aria-hidden="true">
-                  <Icon name="shield" size={16} />
-                </span>
-                <span className="login-highlight-title">{t("loginFeature3Title")}</span>
-              </div>
             </div>
           </div>
         </section>
