@@ -12,6 +12,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 
+// Behind the proxy, req.url carries the app's internal address (localhost:3111), so redirects
+// use the public address from APP_BASE_URL when it is set.
+const origin = (req: NextRequest) => process.env.APP_BASE_URL || req.url;
+
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
@@ -20,11 +24,11 @@ export async function GET(req: NextRequest) {
 
   // User denied access.
   if (errorParam) {
-    return NextResponse.redirect(new URL(`/login?error=oauth_denied`, req.url));
+    return NextResponse.redirect(new URL(`/login?error=oauth_denied`, origin(req)));
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(new URL(`/login?error=oauth_invalid`, req.url));
+    return NextResponse.redirect(new URL(`/login?error=oauth_invalid`, origin(req)));
   }
 
   // Verify CSRF state.
@@ -33,7 +37,7 @@ export async function GET(req: NextRequest) {
   jar.delete("oauth_state");
 
   if (!savedState || savedState !== state) {
-    return NextResponse.redirect(new URL(`/login?error=oauth_state_mismatch`, req.url));
+    return NextResponse.redirect(new URL(`/login?error=oauth_state_mismatch`, origin(req)));
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -41,7 +45,7 @@ export async function GET(req: NextRequest) {
   const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {
-    return NextResponse.redirect(new URL(`/login?error=oauth_not_configured`, req.url));
+    return NextResponse.redirect(new URL(`/login?error=oauth_not_configured`, origin(req)));
   }
 
   // Exchange code for tokens.
@@ -59,7 +63,7 @@ export async function GET(req: NextRequest) {
 
   if (!tokenRes.ok) {
     console.error("[auth/oauth/callback] token exchange failed", await tokenRes.text());
-    return NextResponse.redirect(new URL(`/login?error=oauth_token_failed`, req.url));
+    return NextResponse.redirect(new URL(`/login?error=oauth_token_failed`, origin(req)));
   }
 
   const { access_token } = (await tokenRes.json()) as { access_token: string };
@@ -70,7 +74,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (!userRes.ok) {
-    return NextResponse.redirect(new URL(`/login?error=oauth_userinfo_failed`, req.url));
+    return NextResponse.redirect(new URL(`/login?error=oauth_userinfo_failed`, origin(req)));
   }
 
   const { sub, name, email } = (await userRes.json()) as { sub: string; name?: string; email?: string };
@@ -82,5 +86,5 @@ export async function GET(req: NextRequest) {
   });
   await setSessionCookie(sessionToken);
 
-  return NextResponse.redirect(new URL("/", req.url));
+  return NextResponse.redirect(new URL("/", origin(req)));
 }
