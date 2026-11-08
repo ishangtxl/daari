@@ -74,7 +74,7 @@ Ravi has a 10th pass and no ITI, and spent two years fixing phones at his uncle'
 
 ## Watch for
 
-- **Wrong gaps:** "You need this" on something Ravi clearly has. "Can communicate in English or Hindi" has already shown up this way.
+- **Wrong gaps:** "You need this" on something Ravi clearly has. A language requirement he meets by talking in that language, like "Can communicate in English or Hindi", should show as met.
 - **Scam false alarms:** warnings on ordinary job messages.
 - **Voice:** misheard words, or a slow or cut-off spoken reply.
 - **Language:** English left over in the Hindi or Kannada screens. Listen to "Listen" in each language too.

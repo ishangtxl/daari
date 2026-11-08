@@ -41,7 +41,7 @@ export const EXTRACT_PROMPT = `Extract details about this job seeker from their 
 - skills: array of specific skills in English that they said or clearly showed
 - experience: array of {role, place, years}, in English, with years as a string like "2" or ""
 - wantedWork: array of kinds of work they want, in English
-- languages: array of languages they said they speak, in English
+- languages: array of languages in English, like "Hindi": the ones they said they speak, plus the ones they wrote or spoke whole sentences in here. English words used inside another language, like "mobile" or "repair", do not make it English
 Never invent or assume anything they did not say. Output JSON only.`;
 
 export function resumePrompt(lang: Lang) {

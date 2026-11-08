@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { rankMatches, stopStatus, toMatched } from "../lib/server/match";
-import type { Job, MatchedJob } from "../lib/types";
+import { evidence, rankMatches, stopStatus, toMatched } from "../lib/server/match";
+import { emptyProfile, type Job, type MatchedJob } from "../lib/types";
 
 const job = (overrides: Partial<Job> = {}): Job => ({
   id: "j",
@@ -23,6 +23,13 @@ const job = (overrides: Partial<Job> = {}): Job => ({
   signals: { asks_payment: 0, asks_sensitive: 0, unrealistic: 0 },
   description: "private",
   ...overrides,
+});
+
+describe("evidence", () => {
+  it("includes the languages the person speaks, so language requirements can be met", () => {
+    const text = evidence({ ...emptyProfile(), words: "Main mobile theek karta hoon", languages: ["Hindi"] });
+    expect(text).toContain('"languages":["Hindi"]');
+  });
 });
 
 describe("stopStatus", () => {

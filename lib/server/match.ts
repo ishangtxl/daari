@@ -24,6 +24,7 @@ export function evidence(profile: Profile) {
     skills: profile.skills,
     experience: profile.experience,
     wants: profile.wantedWork,
+    languages: profile.languages,
   };
   lines.push(`Details: ${JSON.stringify(facts)}`);
   return lines.join("\n");
