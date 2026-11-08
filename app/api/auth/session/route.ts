@@ -9,9 +9,8 @@ import { getSession } from "@/lib/auth";
 
 export async function GET() {
   const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ user: null }, { status: 401 });
-  }
+  // Being signed out is a normal answer here, not an error, so it does not fill the console with 401s.
+  if (!session) return NextResponse.json({ user: null });
   return NextResponse.json({
     user: { id: session.sub, name: session.name ?? null, provider: session.provider },
   });

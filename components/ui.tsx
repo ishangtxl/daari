@@ -138,22 +138,26 @@ function AuthButton() {
 export function Shell({ children }: { children: ReactNode }) {
   const { t } = useApp();
   const pathname = usePathname();
+  // Before sign-in every tab leads back to the sign-in page, so it shows none of them.
+  const signingIn = pathname === "/login";
   return (
-    <div className="shell">
-      <nav className="nav" aria-label="Daari">
-        <Link href="/" className="nav-brand">Daari</Link>
-        {NAV.map((item) => {
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          return (
-            <Link key={item.href} href={item.href} className="nav-item" aria-current={active ? "page" : undefined}>
-              <Icon name={item.icon} />
-              <span>{t(item.label)}</span>
-            </Link>
-          );
-        })}
-      </nav>
+    <div className={signingIn ? "shell shell-bare" : "shell"}>
+      {!signingIn && (
+        <nav className="nav" aria-label="Daari">
+          <Link href="/" className="nav-brand">Daari</Link>
+          {NAV.map((item) => {
+            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            return (
+              <Link key={item.href} href={item.href} className="nav-item" aria-current={active ? "page" : undefined}>
+                <Icon name={item.icon} />
+                <span>{t(item.label)}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
       <main className="main">
-        <div className="topbar"><LanguageSwitcher /><AuthButton /></div>
+        <div className="topbar"><LanguageSwitcher />{!signingIn && <AuthButton />}</div>
         {children}
       </main>
     </div>

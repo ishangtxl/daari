@@ -2,7 +2,7 @@
 
 Ravi has a 10th pass and no ITI, and spent two years fixing phones at his uncle's shop in Jayanagar. He is looking for a repair job.
 
-**Setup:** open https://145-223-23-79.sslip.io in a private Chrome window, which starts with no saved data. Allow the microphone when asked. Job matches and AI wording vary between runs, so expect different jobs and numbers.
+**Setup:** open https://145-223-23-79.sslip.io in a private Chrome window, which starts with no saved data. Sign in with one of the Firebase test numbers, which log in with a fixed code and send no SMS. Allow the microphone when asked. Job matches and AI wording vary between runs, so expect different jobs and numbers.
 
 ## Flow
 

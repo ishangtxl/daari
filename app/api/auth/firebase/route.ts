@@ -44,8 +44,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_id_token" }, { status: 401 });
   }
 
-  // Firebase sets phone_number for phone-auth users.
-  const phone = decoded.phone_number ?? decoded.uid;
+  // Only phone sign-ins become sessions here. Firebase sets phone_number for those.
+  const phone = decoded.phone_number;
+  if (!phone) return NextResponse.json({ error: "not_a_phone_sign_in" }, { status: 401 });
   const sessionToken = await createSessionToken({ sub: phone, provider: "phone" });
   await setSessionCookie(sessionToken);
 

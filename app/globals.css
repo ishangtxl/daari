@@ -59,6 +59,7 @@ html[lang="hi"] .tabs button { padding-block: 12px 6px; }
 
 /* Shell */
 .shell { min-height: 100dvh; display: flex; flex-direction: column; padding-bottom: var(--nav-height); }
+.shell-bare { padding-bottom: 0; }
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .nav {
   position: fixed; inset: auto 0 0 0; z-index: 10;
@@ -331,6 +332,7 @@ html[lang="hi"] .tabs button { padding-block: 12px 6px; }
 
 @media (min-width: 900px) {
   .shell { display: grid; grid-template-columns: 216px 1fr; padding-bottom: 0; }
+  .shell-bare { grid-template-columns: 1fr; }
   .nav {
     position: sticky; top: 0; inset: auto; height: 100dvh; display: flex; flex-direction: column; gap: 4px;
     padding: 18px 12px; border-top: 0; border-inline-end: 2px solid var(--ink);

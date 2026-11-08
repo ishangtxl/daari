@@ -15,7 +15,7 @@
  *   Add e.g. +91 9999999999 / code 123456 to bypass SMS during development.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   RecaptchaVerifier,
@@ -29,7 +29,16 @@ import { postJson } from "@/lib/client/api";
 
 type Stage = "phone" | "otp";
 
+// useSearchParams needs a Suspense boundary, or the page cannot be built ahead of time.
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const { ready, t, effectiveLang, update } = useApp();
   const router = useRouter();
   const params = useSearchParams();
