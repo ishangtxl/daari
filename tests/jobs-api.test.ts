@@ -370,6 +370,44 @@ describe("Jobs API HTTP Endpoints (/api/jobs and /api/jobs/[id])", () => {
     expect(unknownRes.status).toBe(404);
   });
 
+  it("POST /api/jobs supports custom skilled trade, custom locality and multiple custom requirements", async () => {
+    mockSession = { sub: "+919988776655", name: "Modern Woodcraft", provider: "phone" };
+    const customReqs = [
+      "Can speak Kannada",
+      "5+ years modular furniture experience",
+      "Must know Edge Banding & CNC routing",
+      "Night shift emergency project availability",
+    ];
+
+    const req = new NextRequest("http://localhost:3000/api/jobs", {
+      method: "POST",
+      body: JSON.stringify({
+        businessName: "Modern Woodcraft Interiors",
+        roleCategory: "Master Carpenter & CNC Operator",
+        locality: "HSR Layout Sector 2",
+        landmark: "Opposite BDA Complex",
+        salaryMin: 26000,
+        salaryMax: 35000,
+        selectedRequirements: customReqs,
+        customNotes: "Tools provided at workshop. Overtime pay included.",
+        whatsappContact: "9988776655",
+        verification: { proofType: "gstin", proofValue: "29AAAAA0000A1Z5" },
+      }),
+    });
+
+    const res = await postJobRoute(req);
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.job.area).toBe("HSR Layout Sector 2");
+    expect(body.job.employer).toBe("Modern Woodcraft Interiors");
+    expect(body.job.title.en).toContain("Master Carpenter");
+    expect(body.job.requirements.length).toBeGreaterThanOrEqual(4);
+    const reqTexts = body.job.requirements.map((r: any) => r.en);
+    expect(reqTexts).toContain("5+ years modular furniture experience");
+    expect(reqTexts).toContain("Must know Edge Banding & CNC routing");
+  });
+
   afterAll(async () => {
     const storePath = path.join(process.cwd(), "data", "posted_jobs.json");
     await fs.writeFile(storePath, JSON.stringify([], null, 2), "utf-8");

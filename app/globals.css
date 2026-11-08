@@ -1250,13 +1250,168 @@ body:has(dialog[open]) { overflow: hidden; }
   gap: 10px;
 }
 
-.custom-locality-input {
-  max-width: 320px;
-  height: 44px;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+.custom-locality-box,
+.custom-role-box {
+  margin-top: 10px;
+  animation: postFieldFadeIn 180ms ease-out;
+}
+
+@keyframes postFieldFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.custom-locality-input,
+.custom-role-input {
+  width: 100%;
+  max-width: 480px;
+  height: 48px;
+  padding: 10px 14px;
+  border: 2px solid var(--cobalt);
+  border-radius: 10px;
+  font-size: 16px;
+  background: #fff;
+  color: var(--ink);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.custom-locality-input:focus,
+.custom-role-input:focus {
+  outline: none;
+  border-color: var(--cobalt);
+  box-shadow: 0 0 0 3px var(--sky);
+}
+
+.chip-other {
+  border-style: dashed;
+}
+
+.chip-other[aria-pressed="true"] {
+  border-style: solid;
+}
+
+.custom-reqs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--sky);
+  border-radius: 12px;
+  border: 1px dashed var(--line);
+}
+
+.control-label-sm {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cobalt);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.custom-reqs-chips {
+  gap: 8px;
+}
+
+.chip-custom-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px 6px 14px;
+  border-radius: 999px;
+  background: var(--cobalt);
+  color: #fff;
+  border: 2px solid var(--cobalt);
   font-size: 15px;
+  font-weight: 600;
+}
+
+.chip-custom-text {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-remove-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 120ms ease, transform 120ms ease;
+  padding: 0;
+}
+
+.chip-remove-btn:hover {
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
+}
+
+.add-custom-req-box {
+  margin-top: 14px;
+}
+
+.add-req-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 4px;
+}
+
+.add-req-input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  font-size: 15px;
+  background: #fff;
+  color: var(--ink);
+  transition: border-color 120ms ease;
+}
+
+.add-req-input:focus {
+  outline: none;
+  border-color: var(--cobalt);
+  box-shadow: 0 0 0 3px var(--sky);
+}
+
+.add-req-btn {
+  white-space: nowrap;
+  min-height: 48px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .add-req-input-group {
+    flex-direction: column;
+  }
+  .add-req-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .salary-inputs-row {

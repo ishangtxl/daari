@@ -49,12 +49,17 @@ export default function PostJobPage() {
 
   const [businessName, setBusinessName] = useState("");
   const [roleCategory, setRoleCategory] = useState<string>("mobile_repair");
+  const [customRoleName, setCustomRoleName] = useState("");
+  const [selectedAreaPreset, setSelectedAreaPreset] = useState<string>("Jayanagar");
   const [locality, setLocality] = useState("Jayanagar");
+  const [customLocality, setCustomLocality] = useState("");
   const [landmark, setLandmark] = useState("");
   const [salaryMin, setSalaryMin] = useState(16000);
   const [salaryMax, setSalaryMax] = useState(22000);
   const [vacancies, setVacancies] = useState(1);
   const [selectedReqs, setSelectedReqs] = useState<string[]>(["reqKannada"]);
+  const [customReqs, setCustomReqs] = useState<string[]>([]);
+  const [newReqInput, setNewReqInput] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [proofType, setProofType] = useState<BusinessProofType>("merchant_upi");
   const [proofValue, setProofValue] = useState("");
@@ -93,31 +98,57 @@ export default function PostJobPage() {
     );
   }
 
+  function handleAddCustomReq() {
+    const trimmed = newReqInput.trim();
+    if (!trimmed) return;
+    if (!customReqs.includes(trimmed)) {
+      setCustomReqs((prev) => [...prev, trimmed]);
+    }
+    setNewReqInput("");
+  }
+
+  function handleRemoveCustomReq(reqToRemove: string) {
+    setCustomReqs((prev) => prev.filter((r) => r !== reqToRemove));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!businessName.trim()) {
       setProblem(t("shopNameLabel"));
       return;
     }
-    if (!locality.trim()) {
-      setProblem(t("localityLabel"));
+
+    const effectiveLocality = (selectedAreaPreset === "other" ? customLocality : locality).trim();
+    if (!effectiveLocality) {
+      setProblem(selectedAreaPreset === "other" ? t("enterCustomLocality") : t("localityLabel"));
+      return;
+    }
+
+    if (roleCategory === "other" && !customRoleName.trim()) {
+      setProblem(t("customRoleLabel"));
       return;
     }
 
     setBusy(true);
     setProblem(null);
 
-    const translatedReqs = selectedReqs.map((key) => t(key as any));
+    const translatedPresetReqs = selectedReqs.map((key) => t(key as any));
+    const allRequirements = [...translatedPresetReqs, ...customReqs];
+
+    const effectiveRole =
+      roleCategory === "other"
+        ? customRoleName.trim()
+        : t(ROLE_OPTIONS.find((r) => r.id === roleCategory)?.labelKey ?? "roleOther");
 
     try {
       const res = await postJson<{ ok: boolean; job: FullJob; error?: string }>("/api/jobs", {
         businessName: businessName.trim(),
-        roleCategory: t(ROLE_OPTIONS.find((r) => r.id === roleCategory)?.labelKey ?? "roleOther"),
-        locality: locality.trim(),
+        roleCategory: effectiveRole,
+        locality: effectiveLocality,
         landmark: landmark.trim(),
         salaryMin,
         salaryMax,
-        selectedRequirements: translatedReqs,
+        selectedRequirements: allRequirements,
         customNotes: customNotes.trim(),
         whatsappContact: whatsappContact.trim() || user?.id,
         verification: {
@@ -184,6 +215,12 @@ export default function PostJobPage() {
                   setBusinessName("");
                   setLandmark("");
                   setCustomNotes("");
+                  setCustomRoleName("");
+                  setCustomLocality("");
+                  setSelectedAreaPreset("Jayanagar");
+                  setLocality("Jayanagar");
+                  setCustomReqs([]);
+                  setNewReqInput("");
                 }}
               >
                 {t("postJobButton")}
@@ -245,20 +282,47 @@ export default function PostJobPage() {
                         key={area}
                         type="button"
                         className="chip"
-                        aria-pressed={locality === area}
-                        onClick={() => setLocality(area)}
+                        aria-pressed={selectedAreaPreset === area}
+                        onClick={() => {
+                          setSelectedAreaPreset(area);
+                          setLocality(area);
+                        }}
                       >
                         {area}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      className="chip chip-other"
+                      aria-pressed={selectedAreaPreset === "other"}
+                      onClick={() => {
+                        setSelectedAreaPreset("other");
+                        setLocality(customLocality);
+                      }}
+                    >
+                      <span>{t("otherLocality")}</span>
+                    </button>
                   </div>
-                  <input
-                    type="text"
-                    className="custom-locality-input"
-                    placeholder={t("localityPlaceholder")}
-                    value={locality}
-                    onChange={(e) => setLocality(e.target.value)}
-                  />
+
+                  {selectedAreaPreset === "other" && (
+                    <div className="custom-locality-box">
+                      <label className="field">
+                        <span>{t("enterCustomLocality")} *</span>
+                        <input
+                          type="text"
+                          className="custom-locality-input"
+                          placeholder={t("customLocalityPlaceholder")}
+                          value={customLocality}
+                          onChange={(e) => {
+                            setCustomLocality(e.target.value);
+                            setLocality(e.target.value);
+                          }}
+                          autoFocus
+                          required
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
               </fieldset>
 
@@ -285,6 +349,23 @@ export default function PostJobPage() {
                     </button>
                   ))}
                 </div>
+
+                {roleCategory === "other" && (
+                  <div className="custom-role-box">
+                    <label className="field">
+                      <span>{t("customRoleLabel")} *</span>
+                      <input
+                        type="text"
+                        className="custom-role-input"
+                        placeholder={t("customRolePlaceholder")}
+                        value={customRoleName}
+                        onChange={(e) => setCustomRoleName(e.target.value)}
+                        autoFocus
+                        required
+                      />
+                    </label>
+                  </div>
+                )}
 
                 <div className="field-group inline-fields">
                   <label className="field">
@@ -379,7 +460,59 @@ export default function PostJobPage() {
                   })}
                 </div>
 
-                <label className="field" style={{ marginTop: "12px" }}>
+                {customReqs.length > 0 && (
+                  <div className="custom-reqs-section">
+                    <span className="control-label-sm">{t("customRequirementsAdded")}</span>
+                    <div className="chip-row custom-reqs-chips">
+                      {customReqs.map((req, idx) => (
+                        <span key={`${req}-${idx}`} className="chip chip-custom-active">
+                          <span className="chip-custom-text">{req}</span>
+                          <button
+                            type="button"
+                            className="chip-remove-btn"
+                            onClick={() => handleRemoveCustomReq(req)}
+                            aria-label={`${t("removeRequirement")}: ${req}`}
+                            title={t("removeRequirement")}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="add-custom-req-box">
+                  <label className="field">
+                    <span>{t("addRequirementLabel")}</span>
+                    <div className="add-req-input-group">
+                      <input
+                        type="text"
+                        className="add-req-input"
+                        placeholder={t("addRequirementPlaceholder")}
+                        value={newReqInput}
+                        onChange={(e) => setNewReqInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddCustomReq();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary add-req-btn"
+                        onClick={handleAddCustomReq}
+                        disabled={!newReqInput.trim()}
+                      >
+                        <Icon name="sparkle" size={16} />
+                        <span>+ {t("addRequirementButton")}</span>
+                      </button>
+                    </div>
+                  </label>
+                </div>
+
+                <label className="field" style={{ marginTop: "14px" }}>
                   <span>{t("customReqPlaceholder")}</span>
                   <textarea
                     rows={3}
