@@ -30,6 +30,26 @@ describe("translate", () => {
       expect(translate(lang, "meets", { met: 4, total: 6 })).not.toContain("{");
     }
   });
+
+  it("provides login branding and feature copy in en, hi, and kn", () => {
+    const keys = [
+      "loginHeroTitle",
+      "loginHeroSubtitle",
+      "loginFeature1Title",
+      "loginFeature1Desc",
+      "loginFeature2Title",
+      "loginFeature2Desc",
+      "loginFeature3Title",
+      "loginFeature3Desc",
+    ] as const;
+    for (const lang of ["en", "hi", "kn"] as const) {
+      for (const key of keys) {
+        const text = translate(lang, key);
+        expect(text).toBeTruthy();
+        expect(text.trim().length).toBeGreaterThan(5);
+      }
+    }
+  });
 });
 
 describe("parseJson", () => {

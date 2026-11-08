@@ -15,7 +15,7 @@
  *   Add e.g. +91 9999999999 / code 123456 to bypass SMS during development.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   RecaptchaVerifier,
@@ -24,12 +24,12 @@ import {
 } from "firebase/auth";
 import { firebaseAuth, firebaseConfigured } from "@/lib/firebase-client";
 import { useApp } from "@/components/app-state";
-import { Icon, Shell } from "@/components/ui";
+import { Icon, Shell, TabebuiaTree } from "@/components/ui";
 import { postJson } from "@/lib/client/api";
 
 type Stage = "phone" | "otp";
 
-export default function LoginPage() {
+function LoginContent() {
   const { ready, t, effectiveLang, update } = useApp();
   const router = useRouter();
   const params = useSearchParams();
@@ -194,126 +194,187 @@ export default function LoginPage() {
 
   return (
     <Shell>
-      <div className="page" lang={effectiveLang}>
-        <header className="page-head">
-          <h1>{t("loginTitle")}</h1>
-          <p>{t("loginSub")}</p>
-        </header>
+      <div className="login-layout" lang={effectiveLang}>
+        {/* Left / Hero brand panel with animated TabebuiaTree and app concept */}
+        <section className="login-brand-panel" aria-label="About Daari">
+          <TabebuiaTree className="login-tree" tall />
+          <div className="login-brand-content">
+            <div className="login-brand-header">
+              <span className="login-brand-mark">ದಾರಿ</span>
+              <span className="login-brand-sub">Daari · दारी</span>
+            </div>
 
-        {!firebaseConfigured && (
-          <p className="error-note" role="alert">
-            <Icon name="warning" />
-            Firebase is not configured. Add <code>NEXT_PUBLIC_FIREBASE_API_KEY</code>,{" "}
-            <code>NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN</code>, and{" "}
-            <code>NEXT_PUBLIC_FIREBASE_PROJECT_ID</code> to your <code>.env</code> file,
-            then restart the dev server.
-          </p>
-        )}
+            <div className="login-hero-block">
+              <h1 className="login-hero-title">{t("loginHeroTitle")}</h1>
+              <p className="login-hero-sub">{t("loginHeroSubtitle")}</p>
+            </div>
 
-        {/*
-          The key prop forces React to replace this div with a brand-new DOM node
-          whenever captchaKey changes, so reCAPTCHA never sees a "already rendered"
-          element on retry.
-        */}
-        <div key={captchaKey} ref={captchaContainerRef} />
+            <div className="login-highlights" role="list">
+              <div className="login-highlight-item" role="listitem">
+                <span className="login-highlight-icon" aria-hidden="true">
+                  <Icon name="mic" size={18} />
+                </span>
+                <div className="login-highlight-text">
+                  <strong className="login-highlight-title">{t("loginFeature1Title")}</strong>
+                  <span className="login-highlight-desc">{t("loginFeature1Desc")}</span>
+                </div>
+              </div>
 
-        {stage === "phone" && (
-          <form className="fields" onSubmit={sendOtp} noValidate>
-            <label className="field">
-              <span>{t("loginPhone")}</span>
-              <input
-                type="tel"
-                inputMode="numeric"
-                autoComplete="tel-national"
-                placeholder={t("loginPhonePlaceholder")}
-                value={phone}
-                disabled={busy || !firebaseConfigured}
-                onChange={(e) => setPhone(e.target.value)}
-                maxLength={15}
-                required
-              />
-            </label>
+              <div className="login-highlight-item" role="listitem">
+                <span className="login-highlight-icon" aria-hidden="true">
+                  <Icon name="tool" size={18} />
+                </span>
+                <div className="login-highlight-text">
+                  <strong className="login-highlight-title">{t("loginFeature2Title")}</strong>
+                  <span className="login-highlight-desc">{t("loginFeature2Desc")}</span>
+                </div>
+              </div>
 
-            {notice && <p className="all-met"><Icon name="check" />{notice}</p>}
-            {problem && <p className="error-note" role="alert"><Icon name="warning" />{problem}</p>}
+              <div className="login-highlight-item" role="listitem">
+                <span className="login-highlight-icon" aria-hidden="true">
+                  <Icon name="shield" size={18} />
+                </span>
+                <div className="login-highlight-text">
+                  <strong className="login-highlight-title">{t("loginFeature3Title")}</strong>
+                  <span className="login-highlight-desc">{t("loginFeature3Desc")}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Right / Login Form Card */}
+        <section className="login-form-panel">
+          <div className="login-card">
+            <header className="login-card-head">
+              <h2>{t("loginTitle")}</h2>
+              <p>{t("loginSub")}</p>
+            </header>
+
+            {!firebaseConfigured && (
+              <p className="error-note" role="alert">
+                <Icon name="warning" />
+                Firebase is not configured. Add <code>NEXT_PUBLIC_FIREBASE_API_KEY</code>,{" "}
+                <code>NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN</code>, and{" "}
+                <code>NEXT_PUBLIC_FIREBASE_PROJECT_ID</code> to your <code>.env</code> file,
+                then restart the dev server.
+              </p>
+            )}
+
+            {/*
+              The key prop forces React to replace this div with a brand-new DOM node
+              whenever captchaKey changes, so reCAPTCHA never sees a "already rendered"
+              element on retry.
+            */}
+            <div key={captchaKey} ref={captchaContainerRef} />
+
+            {stage === "phone" && (
+              <form className="fields" onSubmit={sendOtp} noValidate>
+                <label className="field">
+                  <span>{t("loginPhone")}</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    placeholder={t("loginPhonePlaceholder")}
+                    value={phone}
+                    disabled={busy || !firebaseConfigured}
+                    onChange={(e) => setPhone(e.target.value)}
+                    maxLength={15}
+                    required
+                  />
+                </label>
+
+                {notice && <p className="all-met"><Icon name="check" />{notice}</p>}
+                {problem && <p className="error-note" role="alert"><Icon name="warning" />{problem}</p>}
+
+                <div className="row-actions">
+                  <button
+                    type="submit"
+                    className="btn btn-primary login-submit-btn"
+                    disabled={busy || !firebaseConfigured || phone.trim().replace(/\D/g, "").length < 10}
+                  >
+                    {busy ? <span className="spinner" /> : null}
+                    {busy ? t("loginSending") : t("loginSendOtp")}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {stage === "otp" && (
+              <form className="fields" onSubmit={verifyOtp} noValidate>
+                <p className="honest-note">
+                  {t("loginOtpSent")} +91 {phone.trim().replace(/\D/g, "").slice(-10)}
+                </p>
+
+                <label className="field">
+                  <span>{t("loginOtpLabel")}</span>
+                  <input
+                    ref={codeRef}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="\d{6}"
+                    maxLength={6}
+                    placeholder="••••••"
+                    value={code}
+                    disabled={busy}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    required
+                  />
+                </label>
+
+                {notice && <p className="all-met"><Icon name="check" />{notice}</p>}
+                {problem && <p className="error-note" role="alert"><Icon name="warning" />{problem}</p>}
+
+                <div className="row-actions login-otp-actions">
+                  <button
+                    type="submit"
+                    className="btn btn-primary login-submit-btn"
+                    disabled={busy || code.length !== 6}
+                  >
+                    {busy ? <span className="spinner" /> : null}
+                    {busy ? t("loginVerifying") : t("loginVerify")}
+                  </button>
+                  <button type="button" className="btn btn-quiet" disabled={busy} onClick={resend}>
+                    {t("loginResend")}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* ── Google OAuth ── */}
+            <div className="login-divider">
+              <span>{t("loginOrGoogle")}</span>
+            </div>
 
             <div className="row-actions">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={busy || !firebaseConfigured || phone.trim().replace(/\D/g, "").length < 10}
-              >
-                {busy ? <span className="spinner" /> : null}
-                {busy ? t("loginSending") : t("loginSendOtp")}
-              </button>
+              <a href="/api/auth/oauth/google" className="btn btn-quiet login-google">
+                <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+                  <path fill="#4285F4" d="M45.5 24.5c0-1.5-.1-3-.4-4.5H24v8.5h12.1c-.5 2.8-2.1 5.1-4.5 6.7v5.6h7.3c4.3-3.9 6.6-9.7 6.6-16.3z" />
+                  <path fill="#34A853" d="M24 46c6.5 0 11.9-2.1 15.9-5.8l-7.3-5.6c-2.1 1.4-4.7 2.2-7.6 2.2-5.9 0-10.9-4-12.7-9.3H3.7v5.8C7.7 41.5 15.3 46 24 46z" />
+                  <path fill="#FBBC05" d="M11.3 27.5A14.3 14.3 0 0 1 11.3 20.5v-5.8H3.7A23.5 23.5 0 0 0 .5 24c0 3.8.9 7.4 2.5 10.5l8.3-6.4z" />
+                  <path fill="#EA4335" d="M24 9.5c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 3 29.5.5 24 .5 15.3.5 7.7 5 3.7 12.2l8.3 6.4c1.8-5.3 6.8-9.1 12-9.1z" />
+                </svg>
+                {t("loginGoogle")}
+              </a>
             </div>
-          </form>
-        )}
 
-        {stage === "otp" && (
-          <form className="fields" onSubmit={verifyOtp} noValidate>
-            <p className="honest-note">
-              {t("loginOtpSent")} +91 {phone.trim().replace(/\D/g, "").slice(-10)}
+            <p className="honest-note login-privacy">
+              <Icon name="shield" size={16} />
+              {t("loginPrivacy")}
             </p>
-
-            <label className="field">
-              <span>{t("loginOtpLabel")}</span>
-              <input
-                ref={codeRef}
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="\d{6}"
-                maxLength={6}
-                placeholder="••••••"
-                value={code}
-                disabled={busy}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                required
-              />
-            </label>
-
-            {notice && <p className="all-met"><Icon name="check" />{notice}</p>}
-            {problem && <p className="error-note" role="alert"><Icon name="warning" />{problem}</p>}
-
-            <div className="row-actions">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={busy || code.length !== 6}
-              >
-                {busy ? <span className="spinner" /> : null}
-                {busy ? t("loginVerifying") : t("loginVerify")}
-              </button>
-              <button type="button" className="btn btn-quiet" disabled={busy} onClick={resend}>
-                {t("loginResend")}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* ── Google OAuth ── */}
-        <div className="login-divider">
-          <span>{t("loginOrGoogle")}</span>
-        </div>
-
-        <div className="row-actions">
-          <a href="/api/auth/oauth/google" className="btn btn-quiet login-google">
-            <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#4285F4" d="M45.5 24.5c0-1.5-.1-3-.4-4.5H24v8.5h12.1c-.5 2.8-2.1 5.1-4.5 6.7v5.6h7.3c4.3-3.9 6.6-9.7 6.6-16.3z" />
-              <path fill="#34A853" d="M24 46c6.5 0 11.9-2.1 15.9-5.8l-7.3-5.6c-2.1 1.4-4.7 2.2-7.6 2.2-5.9 0-10.9-4-12.7-9.3H3.7v5.8C7.7 41.5 15.3 46 24 46z" />
-              <path fill="#FBBC05" d="M11.3 27.5A14.3 14.3 0 0 1 11.3 20.5v-5.8H3.7A23.5 23.5 0 0 0 .5 24c0 3.8.9 7.4 2.5 10.5l8.3-6.4z" />
-              <path fill="#EA4335" d="M24 9.5c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 3 29.5.5 24 .5 15.3.5 7.7 5 3.7 12.2l8.3 6.4c1.8-5.3 6.8-9.1 12-9.1z" />
-            </svg>
-            {t("loginGoogle")}
-          </a>
-        </div>
-
-        <p className="honest-note login-privacy">
-          <Icon name="shield" size={16} />
-          {t("loginPrivacy")}
-        </p>
+          </div>
+        </section>
       </div>
     </Shell>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }

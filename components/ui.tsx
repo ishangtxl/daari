@@ -109,8 +109,10 @@ export function LanguageSwitcher() {
 function AuthButton() {
   const { t, user, signOut } = useApp();
   const router = useRouter();
+  const pathname = usePathname();
 
   if (!user) {
+    if (pathname === "/login") return null;
     return (
       <Link href="/login" className="btn btn-quiet auth-btn" aria-label={t("navLogin")}>
         <Icon name="person" size={20} />
@@ -135,25 +137,31 @@ function AuthButton() {
   );
 }
 
-export function Shell({ children }: { children: ReactNode }) {
+export function Shell({ children, hideNav }: { children: ReactNode; hideNav?: boolean }) {
   const { t } = useApp();
   const pathname = usePathname();
+  const isAuth = pathname === "/login" || hideNav;
   return (
-    <div className="shell">
-      <nav className="nav" aria-label="Daari">
-        <Link href="/" className="nav-brand">Daari</Link>
-        {NAV.map((item) => {
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          return (
-            <Link key={item.href} href={item.href} className="nav-item" aria-current={active ? "page" : undefined}>
-              <Icon name={item.icon} />
-              <span>{t(item.label)}</span>
-            </Link>
-          );
-        })}
-      </nav>
+    <div className={`shell${isAuth ? " shell-auth" : ""}`}>
+      {!isAuth && (
+        <nav className="nav" aria-label="Daari">
+          <Link href="/" className="nav-brand">Daari</Link>
+          {NAV.map((item) => {
+            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            return (
+              <Link key={item.href} href={item.href} className="nav-item" aria-current={active ? "page" : undefined}>
+                <Icon name={item.icon} />
+                <span>{t(item.label)}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
       <main className="main">
-        <div className="topbar"><LanguageSwitcher /><AuthButton /></div>
+        <div className="topbar">
+          <LanguageSwitcher />
+          {!isAuth && <AuthButton />}
+        </div>
         {children}
       </main>
     </div>
