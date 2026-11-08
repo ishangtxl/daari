@@ -206,38 +206,28 @@ function LoginContent() {
 
             <div className="login-hero-block">
               <h1 className="login-hero-title">{t("loginHeroTitle")}</h1>
-              <p className="login-hero-sub">{t("loginHeroSubtitle")}</p>
             </div>
 
             <div className="login-highlights" role="list">
               <div className="login-highlight-item" role="listitem">
                 <span className="login-highlight-icon" aria-hidden="true">
-                  <Icon name="mic" size={18} />
+                  <Icon name="mic" size={16} />
                 </span>
-                <div className="login-highlight-text">
-                  <strong className="login-highlight-title">{t("loginFeature1Title")}</strong>
-                  <span className="login-highlight-desc">{t("loginFeature1Desc")}</span>
-                </div>
+                <span className="login-highlight-title">{t("loginFeature1Title")}</span>
               </div>
 
               <div className="login-highlight-item" role="listitem">
                 <span className="login-highlight-icon" aria-hidden="true">
-                  <Icon name="tool" size={18} />
+                  <Icon name="tool" size={16} />
                 </span>
-                <div className="login-highlight-text">
-                  <strong className="login-highlight-title">{t("loginFeature2Title")}</strong>
-                  <span className="login-highlight-desc">{t("loginFeature2Desc")}</span>
-                </div>
+                <span className="login-highlight-title">{t("loginFeature2Title")}</span>
               </div>
 
               <div className="login-highlight-item" role="listitem">
                 <span className="login-highlight-icon" aria-hidden="true">
-                  <Icon name="shield" size={18} />
+                  <Icon name="shield" size={16} />
                 </span>
-                <div className="login-highlight-text">
-                  <strong className="login-highlight-title">{t("loginFeature3Title")}</strong>
-                  <span className="login-highlight-desc">{t("loginFeature3Desc")}</span>
-                </div>
+                <span className="login-highlight-title">{t("loginFeature3Title")}</span>
               </div>
             </div>
           </div>

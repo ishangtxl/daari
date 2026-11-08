@@ -511,32 +511,24 @@ body:has(dialog[open]) { overflow: hidden; }
 
 .login-hero-block {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .login-hero-title {
-  font-size: clamp(20px, 3.2vw, 32px);
+  font-size: clamp(19px, 3vw, 28px);
   font-weight: 800;
   line-height: 1.25;
   color: #fff;
   margin: 0;
-  text-wrap: balance;
   text-shadow: 0 1px 3px rgba(13, 30, 99, 0.4);
-}
-
-.login-hero-sub {
-  font-size: clamp(14px, 1.8vw, 16px);
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.94);
-  margin: 0;
-  max-width: 44ch;
-  text-shadow: 0 1px 2px rgba(13, 30, 99, 0.4);
 }
 
 .login-highlights {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
+  align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
   margin-top: 4px;
 }
 
@@ -552,6 +544,7 @@ body:has(dialog[open]) { overflow: hidden; }
   font-size: 13px;
   font-weight: 600;
   color: #fff;
+  white-space: nowrap;
 }
 
 .login-highlight-icon {
@@ -561,18 +554,10 @@ body:has(dialog[open]) { overflow: hidden; }
   flex: none;
 }
 
-.login-highlight-text {
-  display: inline;
-}
-
 .login-highlight-title {
   font-weight: 700;
   color: #fff;
   display: inline;
-}
-
-.login-highlight-desc {
-  display: none;
 }
 
 .login-form-panel {
@@ -645,66 +630,50 @@ body:has(dialog[open]) { overflow: hidden; }
     width: 440px;
   }
   .login-brand-content {
-    max-width: 460px;
-    gap: 22px;
+    max-width: 580px;
+    gap: 16px;
   }
   .login-brand-mark {
-    font-size: 48px;
+    font-size: 46px;
   }
   .login-brand-sub {
     font-size: 18px;
   }
   .login-hero-title {
-    font-size: 32px;
-  }
-  .login-hero-sub {
-    font-size: 16px;
-    line-height: 1.55;
+    font-size: 27px;
+    white-space: nowrap;
   }
   .login-highlights {
-    display: grid;
-    gap: 12px;
-    margin-top: 6px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+    margin-top: 4px;
   }
   .login-highlight-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 10px 14px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     backdrop-filter: blur(4px);
+    white-space: nowrap;
     transition: background-color 140ms ease-out, border-color 140ms ease-out;
   }
   .login-highlight-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.16);
-    color: var(--auto);
-    display: grid;
+    display: inline-grid;
     place-items: center;
+    color: var(--auto);
     flex: none;
-    margin-top: 2px;
-  }
-  .login-highlight-text {
-    display: grid;
-    gap: 2px;
-    min-width: 0;
   }
   .login-highlight-title {
-    font-size: 15.5px;
+    font-size: 13.5px;
     font-weight: 700;
     color: #fff;
-    display: block;
-  }
-  .login-highlight-desc {
-    font-size: 13.5px;
-    line-height: 1.45;
-    color: rgba(255, 255, 255, 0.88);
-    margin: 0;
-    display: block;
+    display: inline;
   }
   .login-form-panel {
     padding: 64px 48px;
