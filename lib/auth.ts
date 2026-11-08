@@ -19,6 +19,15 @@ type SessionClaims = {
 
 export type SessionPayload = JWTPayload & SessionClaims;
 
+/**
+ * Google sign-in stays hidden until GOOGLE_SIGNIN=on, because Google rejects the sign-in
+ * until this site's callback address is added to the OAuth client in Google Cloud.
+ */
+export function googleSignInEnabled(): boolean {
+  const env = process.env;
+  return env.GOOGLE_SIGNIN === "on" && Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI);
+}
+
 /** Null when AUTH_SECRET is missing or short, so every check fails closed instead of using a default. */
 function authSecret(): Uint8Array | null {
   const raw = process.env.AUTH_SECRET;

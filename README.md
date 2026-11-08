@@ -40,7 +40,7 @@ GOOGLE_PLACES_API_KEY=   # optional; used by Places to ask
 GOOGLE_ROUTES_API_KEY= # optional; server-side Routes API key, enables road-distance filters
 ```
 
-Every page needs sign-in, by phone through Firebase or with Google, so `AUTH_SECRET` and the Firebase and Google keys in `.env.example` are needed too. Firebase test numbers sign in with a fixed code and send no SMS.
+Every page needs sign-in, by phone through Firebase or with Google, so `AUTH_SECRET` and the Firebase and Google keys in `.env.example` are needed too. Firebase test numbers sign in with a fixed code and send no SMS. The Google button stays hidden until `GOOGLE_SIGNIN=on`, which should be set only after `GOOGLE_REDIRECT_URI` is added as an authorised redirect URI in Google Cloud.
 
 ```
 pnpm install

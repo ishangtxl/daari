@@ -8,6 +8,7 @@
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { googleSignInEnabled } from "@/lib/auth";
 
 const SCOPES = ["openid", "email", "profile"].join(" ");
 
@@ -15,7 +16,7 @@ export async function GET() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
-  if (!clientId || !redirectUri) {
+  if (!googleSignInEnabled() || !clientId || !redirectUri) {
     return NextResponse.json({ error: "google_oauth_not_configured" }, { status: 503 });
   }
 

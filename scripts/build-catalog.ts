@@ -52,7 +52,7 @@ const ENRICH_PROMPT = `You prepare job listings for people with limited formal e
 - summary: {en, hi, kn}, one short simple sentence saying what the person will actually do.
 - area: the Bangalore locality if stated, otherwise null.
 - salary_text: pay as stated, like "Rs 15,000 to 25,000 a month", otherwise null. Never guess.
-- salary_min: lowest monthly pay in rupees as a number, otherwise null.
+- salary_min: lowest monthly pay in rupees as a number, otherwise null. Divide yearly pay (including LPA) by 12.
 - gender_restriction: "male" or "female" only if the listing explicitly restricts it, otherwise null.
 - requirements: up to 6 concrete things the applicant must have, taken only from the listing, most important first. Each is {en, hi, kn, kind} where kind is education, experience, skill, licence or other. Write each so it can be checked against what a person says, like "Has an ITI qualification". Skip vague items like "hard working". Never invent a requirement.
 Output JSON only.`;
