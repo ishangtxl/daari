@@ -61,5 +61,11 @@ export async function middleware(req: NextRequest) {
 
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = "/login";
+  if (pathname !== "/") {
+    loginUrl.searchParams.set("redirect", pathname);
+    if (pathname.startsWith("/jobs/post")) {
+      loginUrl.searchParams.set("intent", "employer");
+    }
+  }
   return NextResponse.redirect(loginUrl);
 }

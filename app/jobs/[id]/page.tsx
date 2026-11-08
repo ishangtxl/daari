@@ -75,7 +75,18 @@ function ApplyKit({ job }: { job: MatchedJob }) {
 
   const applyButtons = (
     <div className="row-actions">
-      {job.applyLink && <a className={`btn ${kit ? "btn-primary" : "btn-quiet"}`} href={job.applyLink} target="_blank" rel="noreferrer"><Icon name="external" />{t("openApply")}</a>}
+      {job.applyLink && (
+        <a
+          className={`btn ${kit || job.applyLink.includes("wa.me") ? "btn-primary" : "btn-quiet"}`}
+          style={job.applyLink.includes("wa.me") ? { backgroundColor: "#1e7e34", borderColor: "#1e7e34" } : undefined}
+          href={job.applyLink}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Icon name={job.applyLink.includes("wa.me") ? "mic" : "external"} />
+          {job.applyLink.includes("wa.me") ? t("chatOnWhatsApp") : t("openApply")}
+        </a>
+      )}
       <button
         type="button"
         className="btn btn-quiet"
@@ -204,6 +215,14 @@ export default function JobDetail() {
       <div className="page job-page">
         {back}
         <header className="job-head">
+          <div className="job-tag-row">
+            {(job.publisher === "Daari Direct" || (job as any).metadata) && (
+              <span className="badge-direct">{t("directShopBadge")}</span>
+            )}
+            {(job as any).metadata?.verification?.isVerified && (
+              <span className="badge-verified">{t("verifyBadge")}</span>
+            )}
+          </div>
           <h1>{job.title[effectiveLang]}</h1>
           <p className="job-where">{job.employer}, {job.area}</p>
           <PayText className="job-pay job-pay-large" text={job.salaryText} />

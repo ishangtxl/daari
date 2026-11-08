@@ -1,15 +1,40 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { ROLES } from "../roles";
-import type { Job, MatchedJob, Profile, StopStatus } from "../types";
+import type { FullJob, Job, MatchedJob, Profile, StopStatus } from "../types";
 import { fitBand, isRisky } from "../rank";
 import { decide, type Question } from "./jev";
 
 let catalog: Job[] | null = null;
+let postedCache: { at: number; jobs: FullJob[] } | null = null;
 
-export function allJobs(): Job[] {
+function getPostedJobsSync(): FullJob[] {
+  const now = Date.now();
+  if (postedCache && now - postedCache.at < 2000) {
+    return postedCache.jobs;
+  }
+  try {
+    const filePath = path.join(process.cwd(), "data/posted_jobs.json");
+    if (!existsSync(filePath)) return [];
+    const raw = readFileSync(filePath, "utf8");
+    const parsed = JSON.parse(raw);
+    const nowIso = new Date().toISOString();
+    const active = (Array.isArray(parsed) ? parsed : []).filter((j: FullJob) => {
+      if (j.metadata?.status && j.metadata.status !== "active") return false;
+      if (j.metadata?.expiresAt && j.metadata.expiresAt < nowIso) return false;
+      return true;
+    });
+    postedCache = { at: now, jobs: active };
+    return active;
+  } catch {
+    return [];
+  }
+}
+
+export function allJobs(): FullJob[] {
   catalog ??= JSON.parse(readFileSync(path.join(process.cwd(), "data/jobs.json"), "utf8")) as Job[];
-  return catalog;
+  const posted = getPostedJobsSync();
+  return [...posted, ...catalog];
 }
 
 export const jobById = (id: string) => allJobs().find((job) => job.id === id);

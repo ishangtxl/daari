@@ -27,14 +27,20 @@ import { useApp } from "@/components/app-state";
 import { Icon, Shell, TabebuiaTree } from "@/components/ui";
 import { postJson } from "@/lib/client/api";
 
-type Stage = "phone" | "otp";
+type Stage = "intent" | "phone" | "otp";
+type Intent = "seeker" | "employer";
 
 function LoginContent() {
   const { ready, t, effectiveLang, update } = useApp();
   const router = useRouter();
   const params = useSearchParams();
 
-  const [stage, setStage] = useState<Stage>("phone");
+  const initialIntentParam = params.get("intent");
+  const initialIntent: Intent =
+    initialIntentParam === "post" || initialIntentParam === "employer" ? "employer" : "seeker";
+  const [intent, setIntent] = useState<Intent>(initialIntent);
+  const [stage, setStage] = useState<Stage>(initialIntentParam ? "phone" : "intent");
+
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -162,7 +168,8 @@ function LoginContent() {
       const { user } = await postJson<{ ok: boolean; user: { phone: string; provider: "phone" } }>("/api/auth/firebase", { idToken });
       // Update app-state immediately so the nav bar flips to "Sign out" before redirect.
       update({ user: { id: user.phone, name: null, provider: "phone" } });
-      router.replace("/");
+      const destination = intent === "employer" ? "/jobs/post" : (params.get("redirect") || "/");
+      router.replace(destination);
     } catch (err: unknown) {
       const fbCode = (err as { code?: string }).code ?? "";
       if (fbCode === "auth/invalid-verification-code") {
@@ -236,12 +243,90 @@ function LoginContent() {
         {/* Right / Login Form Card */}
         <section className="login-form-panel">
           <div className="login-card">
-            <header className="login-card-head">
-              <h2>{t("loginTitle")}</h2>
-              <p>{t("loginSub")}</p>
-            </header>
+            {stage === "intent" ? (
+              <div className="login-intent-box">
+                <header className="login-card-head">
+                  <h2>{t("intentQuestion")}</h2>
+                  <p>{t("loginHeroTitle")}</p>
+                </header>
 
-            {!firebaseConfigured && (
+                <div className="intent-cards" role="group" aria-label={t("intentQuestion")}>
+                  <button
+                    type="button"
+                    className="intent-card intent-card-seeker"
+                    onClick={() => {
+                      setIntent("seeker");
+                      setStage("phone");
+                    }}
+                  >
+                    <div className="intent-card-top">
+                      <span className="intent-card-icon" aria-hidden="true">
+                        <Icon name="briefcase" size={24} />
+                      </span>
+                      <span className="intent-card-badge">{t("intentSeekerBadge")}</span>
+                    </div>
+                    <div className="intent-card-content">
+                      <h3 className="intent-card-title">{t("intentSeekerTitle")}</h3>
+                      <p className="intent-card-sub">{t("intentSeekerSub")}</p>
+                    </div>
+                    <span className="intent-card-action" aria-hidden="true">
+                      <span>{t("navLogin")}</span>
+                      <span className="intent-arrow">→</span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="intent-card intent-card-employer"
+                    onClick={() => {
+                      setIntent("employer");
+                      setStage("phone");
+                    }}
+                  >
+                    <div className="intent-card-top">
+                      <span className="intent-card-icon intent-icon-emp" aria-hidden="true">
+                        <Icon name="tool" size={24} />
+                      </span>
+                      <span className="intent-card-badge intent-badge-emp">{t("intentEmployerBadge")}</span>
+                    </div>
+                    <div className="intent-card-content">
+                      <h3 className="intent-card-title">{t("intentEmployerTitle")}</h3>
+                      <p className="intent-card-sub">{t("intentEmployerSub")}</p>
+                    </div>
+                    <span className="intent-card-action intent-action-emp" aria-hidden="true">
+                      <span>{t("postJobButton")}</span>
+                      <span className="intent-arrow">→</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="intent-nav-bar">
+                  <button
+                    type="button"
+                    className="link-button intent-back-btn"
+                    onClick={() => setStage("intent")}
+                  >
+                    ← {t("loginBack")}
+                  </button>
+                  <button
+                    type="button"
+                    className="link-button intent-switch-btn"
+                    onClick={() => setIntent((prev) => (prev === "employer" ? "seeker" : "employer"))}
+                  >
+                    {intent === "employer" ? t("intentSwitchToSeeker") : t("intentSwitchToEmployer")}
+                  </button>
+                </div>
+
+                <header className="login-card-head">
+                  <h2>{intent === "employer" ? t("loginTitleEmployer") : t("loginTitle")}</h2>
+                  <p>{intent === "employer" ? t("loginSubEmployer") : t("loginSub")}</p>
+                </header>
+              </>
+            )}
+
+            {!firebaseConfigured && stage !== "intent" && (
               <p className="error-note" role="alert">
                 <Icon name="warning" />
                 Firebase is not configured. Add <code>NEXT_PUBLIC_FIREBASE_API_KEY</code>,{" "}
@@ -333,27 +418,31 @@ function LoginContent() {
               </form>
             )}
 
-            {/* ── Google OAuth ── */}
-            <div className="login-divider">
-              <span>{t("loginOrGoogle")}</span>
-            </div>
+            {stage !== "intent" && (
+              <>
+                {/* ── Google OAuth ── */}
+                <div className="login-divider">
+                  <span>{t("loginOrGoogle")}</span>
+                </div>
 
-            <div className="row-actions">
-              <a href="/api/auth/oauth/google" className="btn btn-quiet login-google">
-                <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-                  <path fill="#4285F4" d="M45.5 24.5c0-1.5-.1-3-.4-4.5H24v8.5h12.1c-.5 2.8-2.1 5.1-4.5 6.7v5.6h7.3c4.3-3.9 6.6-9.7 6.6-16.3z" />
-                  <path fill="#34A853" d="M24 46c6.5 0 11.9-2.1 15.9-5.8l-7.3-5.6c-2.1 1.4-4.7 2.2-7.6 2.2-5.9 0-10.9-4-12.7-9.3H3.7v5.8C7.7 41.5 15.3 46 24 46z" />
-                  <path fill="#FBBC05" d="M11.3 27.5A14.3 14.3 0 0 1 11.3 20.5v-5.8H3.7A23.5 23.5 0 0 0 .5 24c0 3.8.9 7.4 2.5 10.5l8.3-6.4z" />
-                  <path fill="#EA4335" d="M24 9.5c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 3 29.5.5 24 .5 15.3.5 7.7 5 3.7 12.2l8.3 6.4c1.8-5.3 6.8-9.1 12-9.1z" />
-                </svg>
-                {t("loginGoogle")}
-              </a>
-            </div>
+                <div className="row-actions">
+                  <a href={`/api/auth/oauth/google?intent=${intent}`} className="btn btn-quiet login-google">
+                    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+                      <path fill="#4285F4" d="M45.5 24.5c0-1.5-.1-3-.4-4.5H24v8.5h12.1c-.5 2.8-2.1 5.1-4.5 6.7v5.6h7.3c4.3-3.9 6.6-9.7 6.6-16.3z" />
+                      <path fill="#34A853" d="M24 46c6.5 0 11.9-2.1 15.9-5.8l-7.3-5.6c-2.1 1.4-4.7 2.2-7.6 2.2-5.9 0-10.9-4-12.7-9.3H3.7v5.8C7.7 41.5 15.3 46 24 46z" />
+                      <path fill="#FBBC05" d="M11.3 27.5A14.3 14.3 0 0 1 11.3 20.5v-5.8H3.7A23.5 23.5 0 0 0 .5 24c0 3.8.9 7.4 2.5 10.5l8.3-6.4z" />
+                      <path fill="#EA4335" d="M24 9.5c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 3 29.5.5 24 .5 15.3.5 7.7 5 3.7 12.2l8.3 6.4c1.8-5.3 6.8-9.1 12-9.1z" />
+                    </svg>
+                    {t("loginGoogle")}
+                  </a>
+                </div>
 
-            <p className="honest-note login-privacy">
-              <Icon name="shield" size={16} />
-              {t("loginPrivacy")}
-            </p>
+                <p className="honest-note login-privacy">
+                  <Icon name="shield" size={16} />
+                  {t("loginPrivacy")}
+                </p>
+              </>
+            )}
           </div>
         </section>
       </div>

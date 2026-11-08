@@ -73,6 +73,10 @@ export default function Home() {
           <Icon name="person" size={28} />
           <span>{t("homeResume")}</span>
         </Link>
+        <Link href="/jobs/post" className="home-link">
+          <Icon name="tool" size={28} />
+          <span>{t("homePostJob")}</span>
+        </Link>
       </section>
     </Shell>
   );

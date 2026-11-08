@@ -89,3 +89,33 @@ export const resumeSchema = z.object({
   education: z.array(z.string().max(200)).max(8).default([]),
   languages: z.array(z.string().max(60)).max(10).default([]),
 });
+
+export type BusinessProofType = "gstin" | "udyam" | "merchant_upi" | "storefront" | "none";
+
+export type BusinessVerification = {
+  proofType: BusinessProofType;
+  proofValue?: string;
+  isVerified: boolean;
+  businessName: string;
+  businessAddress: string;
+  locality: string;
+  pincode?: string;
+};
+
+export type PostedJobMetadata = {
+  source: "direct_employer";
+  posterPhone: string;
+  posterName?: string;
+  posterId: string;
+  verification: BusinessVerification;
+  whatsappContact: string;
+  status: "active" | "rejected" | "paused";
+  rejectionReason?: string;
+  createdAt: string;
+  expiresAt: string;
+};
+
+export type FullJob = Job & {
+  metadata?: PostedJobMetadata;
+};
+

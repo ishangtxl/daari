@@ -184,6 +184,17 @@ function OpenJobs() {
 
   return (
     <>
+      <div className="job-post-banner">
+        <div className="job-post-banner-copy">
+          <h3>{t("postJobBannerTitle")}</h3>
+          <p>{t("postJobBannerSub")}</p>
+        </div>
+        <Link href="/jobs/post" className="btn btn-primary job-post-banner-btn">
+          <Icon name="tool" size={18} />
+          <span>{t("postJobButton")}</span>
+        </Link>
+      </div>
+
       {locationForm}
       <section className="job-controls" aria-label={t("jobFilters")}>
         <ChipGroup label={t("sortBy")}>
@@ -246,7 +257,17 @@ function OpenJobs() {
               <li key={job.id}>
                 <Link href={`/jobs/${job.id}`} className="job-row">
                   <div className="job-row-head">
-                    <h3>{job.title[effectiveLang]}</h3>
+                    <div>
+                      {(job.publisher === "Daari Direct" || (job as any).metadata) && (
+                        <div className="job-tag-row" style={{ marginBottom: "4px" }}>
+                          <span className="badge-direct">{t("directShopBadge")}</span>
+                          {(job as any).metadata?.verification?.isVerified && (
+                            <span className="badge-verified">{t("verifyBadge")}</span>
+                          )}
+                        </div>
+                      )}
+                      <h3>{job.title[effectiveLang]}</h3>
+                    </div>
                     <PayText className="job-pay" text={job.salaryText} />
                   </div>
                   <p className="job-where">

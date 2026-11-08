@@ -341,7 +341,7 @@ html[lang="hi"] .tabs button { padding-block: 12px 6px; }
   .hero-tree { top: -24px; right: 4%; width: 460px; }
   .hero-copy { padding: 120px 56px 56px; }
   .hero-copy > h1, .hero-copy > p { max-width: none; }
-  .home-links { grid-template-columns: repeat(3, 1fr); }
+  .home-links { grid-template-columns: repeat(4, 1fr); }
   .home-link { border-inline-end: 1px solid var(--line); padding-inline: 28px; }
   .dock { bottom: 0; }
   .page { padding-top: 40px; }
@@ -613,6 +613,154 @@ body:has(dialog[open]) { overflow: hidden; }
 .login-privacy { display: flex; align-items: flex-start; gap: 8px; font-size: 15px; color: var(--muted); padding-top: 4px; margin: 0; }
 .login-privacy .icon { flex: none; margin-top: 2px; }
 
+/* Login Intent Gateway */
+.login-intent-box {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.intent-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.intent-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: start;
+  gap: 10px;
+  padding: 18px;
+  background: #ffffff;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  cursor: pointer;
+  position: relative;
+  transition: transform 140ms ease-out, border-color 140ms ease-out, box-shadow 140ms ease-out;
+  box-shadow: 0 3px 12px rgba(13, 30, 99, 0.05);
+}
+
+.intent-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--cobalt);
+  box-shadow: 0 8px 24px rgba(13, 30, 99, 0.12);
+}
+
+.intent-card:active {
+  transform: translateY(0);
+}
+
+.intent-card-seeker {
+  border-left: 6px solid var(--cobalt);
+}
+
+.intent-card-employer {
+  border-left: 6px solid #e59400;
+}
+
+.intent-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.intent-card-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--sky);
+  color: var(--cobalt);
+}
+
+.intent-icon-emp {
+  background: #fff8e1;
+  color: #b26a00;
+}
+
+.intent-card-badge {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--sky);
+  color: var(--cobalt);
+}
+
+.intent-badge-emp {
+  background: #fff8e1;
+  color: #935300;
+}
+
+.intent-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.intent-card-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.intent-card-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.intent-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cobalt);
+  margin-top: 4px;
+}
+
+.intent-action-emp {
+  color: #b26a00;
+}
+
+.intent-arrow {
+  transition: transform 120ms ease-out;
+}
+
+.intent-card:hover .intent-arrow {
+  transform: translateX(4px);
+}
+
+.intent-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: -6px;
+}
+
+.intent-back-btn {
+  font-size: 14px;
+  color: var(--muted);
+  padding: 4px 0;
+}
+
+.intent-switch-btn {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cobalt);
+  text-decoration: underline;
+  padding: 4px 0;
+}
+
 @media (min-width: 900px) {
   .login-layout {
     display: grid;
@@ -699,3 +847,333 @@ body:has(dialog[open]) { overflow: hidden; }
     width: 490px;
   }
 }
+
+/* Job Posting Form & Direct Employer Badges */
+.post-job-container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+
+.post-job-header {
+  margin-bottom: 24px;
+}
+
+.post-job-header h1 {
+  font-size: clamp(26px, 4vw, 36px);
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.2;
+  margin: 0 0 6px;
+}
+
+.post-job-header p {
+  font-size: 16px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.post-job-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.post-section {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 14px;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  box-shadow: 0 2px 8px rgba(13, 30, 99, 0.04);
+}
+
+.post-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  padding: 0 6px;
+}
+
+.post-step-num {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--cobalt);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.role-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.role-select-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  text-align: start;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  transition: border-color 120ms ease-out, background-color 120ms ease-out;
+}
+
+.role-select-chip[aria-pressed="true"] {
+  border-color: var(--cobalt);
+  background: var(--sky);
+  color: var(--cobalt);
+}
+
+.role-chip-icon {
+  color: var(--cobalt);
+}
+
+.locality-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.custom-locality-input {
+  max-width: 320px;
+  height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.salary-inputs-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.salary-dash {
+  font-size: 20px;
+  color: var(--muted);
+  padding-bottom: 12px;
+}
+
+.salary-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.verification-options {
+  display: grid;
+  gap: 10px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.radio-option:has(input:checked) {
+  border-color: var(--cobalt);
+  background: var(--sky);
+}
+
+.radio-option input {
+  accent-color: var(--cobalt);
+  width: 18px;
+  height: 18px;
+}
+
+.post-form-submit-row {
+  margin-top: 10px;
+}
+
+.post-publish-btn {
+  width: 100%;
+  min-height: 52px;
+  font-size: 18px;
+  justify-content: center;
+}
+
+/* Auth prompt */
+.post-job-auth-prompt {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 24px 16px;
+}
+
+.auth-prompt-card {
+  max-width: 440px;
+  width: 100%;
+  background: var(--paper);
+  border: 2px solid var(--cobalt);
+  border-radius: 16px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  box-shadow: 0 8px 30px rgba(13, 30, 99, 0.1);
+}
+
+.auth-prompt-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background: var(--sky);
+  color: var(--cobalt);
+}
+
+.auth-prompt-btn {
+  width: 100%;
+  min-height: 48px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+/* Success Card */
+.post-job-success-card {
+  background: #fff;
+  border: 2px solid #2e7d32;
+  border-radius: 16px;
+  padding: 36px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  box-shadow: 0 8px 30px rgba(46, 125, 50, 0.1);
+}
+
+.success-icon-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 999px;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.success-sub {
+  font-size: 16px;
+  color: var(--muted);
+  margin: -6px 0 6px;
+}
+
+.success-preview-box {
+  width: 100%;
+  text-align: start;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.job-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-direct {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--sky);
+  color: var(--cobalt);
+}
+
+.badge-verified {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #c8e6c9;
+}
+
+/* Banner for /jobs page */
+.job-post-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  background: #fff;
+  border: 2px solid var(--cobalt);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(13, 30, 99, 0.08);
+}
+
+.job-post-banner-copy h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 2px;
+}
+
+.job-post-banner-copy p {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.job-post-banner-btn {
+  flex: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .job-post-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .job-post-banner-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
