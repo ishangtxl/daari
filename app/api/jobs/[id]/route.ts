@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { closeJob, getJobById } from "@/lib/server/jobs-store";
+import { allJobs } from "@/lib/server/match";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const job = await getJobById(id);
+  const job = (await getJobById(id)) || allJobs().find((j) => j.id === id) || null;
   if (!job) {
     return NextResponse.json({ ok: false, error: "Job not found" }, { status: 404 });
   }

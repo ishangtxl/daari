@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { ROLES } from "../roles";
 import type { FullJob, Job, MatchedJob, Profile, StopStatus } from "../types";
@@ -6,16 +6,16 @@ import { fitBand, isRisky } from "../rank";
 import { decide, type Question } from "./jev";
 
 let catalog: Job[] | null = null;
-let postedCache: { at: number; jobs: FullJob[] } | null = null;
+let postedCache: { mtime: number; jobs: FullJob[] } | null = null;
 
 function getPostedJobsSync(): FullJob[] {
-  const now = Date.now();
-  if (postedCache && now - postedCache.at < 2000) {
-    return postedCache.jobs;
-  }
   try {
     const filePath = path.join(process.cwd(), "data/posted_jobs.json");
     if (!existsSync(filePath)) return [];
+    const stat = statSync(filePath);
+    if (postedCache && postedCache.mtime === stat.mtimeMs) {
+      return postedCache.jobs;
+    }
     const raw = readFileSync(filePath, "utf8");
     const parsed = JSON.parse(raw);
     const nowIso = new Date().toISOString();
@@ -24,7 +24,7 @@ function getPostedJobsSync(): FullJob[] {
       if (j.metadata?.expiresAt && j.metadata.expiresAt < nowIso) return false;
       return true;
     });
-    postedCache = { at: now, jobs: active };
+    postedCache = { mtime: stat.mtimeMs, jobs: active };
     return active;
   } catch {
     return [];

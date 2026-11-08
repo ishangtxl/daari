@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getActiveJobs, saveJob } from "@/lib/server/jobs-store";
+import { allJobs } from "@/lib/server/match";
 import {
   enrichJobWithAI,
   screenJobScam,
@@ -11,29 +12,41 @@ import type { BusinessVerification, FullJob } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   try {
-    const jobs = await getActiveJobs();
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("q")?.toLowerCase();
     const role = searchParams.get("role")?.toLowerCase();
+    const area = searchParams.get("area")?.toLowerCase() || searchParams.get("locality")?.toLowerCase();
+    const minSalaryStr = searchParams.get("minSalary");
+    const minSalary = minSalaryStr ? Number(minSalaryStr) : undefined;
+    const source = searchParams.get("source");
+
+    const jobs = source === "direct" ? await getActiveJobs() : allJobs();
 
     let filtered = jobs;
     if (role) {
       filtered = filtered.filter(
         (j) =>
-          j.roles.some((r) => r.toLowerCase().includes(role)) ||
-          j.title.en.toLowerCase().includes(role) ||
-          j.title.kn.toLowerCase().includes(role) ||
-          j.title.hi.toLowerCase().includes(role),
+          j.roles?.some((r) => r.toLowerCase().includes(role)) ||
+          j.title?.en?.toLowerCase().includes(role) ||
+          j.title?.kn?.toLowerCase().includes(role) ||
+          j.title?.hi?.toLowerCase().includes(role),
       );
+    }
+    if (area) {
+      filtered = filtered.filter((j) => j.area?.toLowerCase().includes(area));
+    }
+    if (minSalary && !isNaN(minSalary)) {
+      filtered = filtered.filter((j) => (j.salaryMin ?? 0) >= minSalary);
     }
     if (query) {
       filtered = filtered.filter(
         (j) =>
-          j.title.en.toLowerCase().includes(query) ||
-          j.title.kn.toLowerCase().includes(query) ||
-          j.title.hi.toLowerCase().includes(query) ||
-          j.area.toLowerCase().includes(query) ||
-          j.employer.toLowerCase().includes(query),
+          j.title?.en?.toLowerCase().includes(query) ||
+          j.title?.kn?.toLowerCase().includes(query) ||
+          j.title?.hi?.toLowerCase().includes(query) ||
+          j.area?.toLowerCase().includes(query) ||
+          j.employer?.toLowerCase().includes(query) ||
+          j.description?.toLowerCase().includes(query),
       );
     }
 
@@ -122,8 +135,15 @@ export async function POST(req: NextRequest) {
     // 4. Construct FullJob
     const now = new Date();
     const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
-    const cleanPhone = (whatsappContact || session.sub).replace(/\D/g, "");
-    const waNumber = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone.slice(-10)}`;
+    const rawContact = whatsappContact || session.sub || "";
+    const cleanPhone = rawContact.replace(/\D/g, "");
+    if (cleanPhone.length < 10) {
+      return NextResponse.json(
+        { ok: false, error: "A valid 10-digit phone number is required for WhatsApp inquiries." },
+        { status: 400 },
+      );
+    }
+    const waNumber = cleanPhone.startsWith("91") && cleanPhone.length === 12 ? cleanPhone : `91${cleanPhone.slice(-10)}`;
     const jobId = `job_shop_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
     const isVerifiedProof = proofType !== "none";
