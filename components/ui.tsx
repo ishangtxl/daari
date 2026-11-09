@@ -32,6 +32,7 @@ const PATHS: Record<string, ReactNode> = {
   rupee: <path d="M7 5h10M7 9h10M7 5c6 0 6 8 0 8h-1l7 7" />,
   filter: <path d="M4 6h16M7 12h10M10 18h4" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
+  compass: <><circle cx="12" cy="12" r="9" /><path d="M15.5 8.5l-2 5-5 2 2-5z" /></>,
 };
 
 export function Icon({ name, size = 24 }: { name: keyof typeof PATHS | string; size?: number }) {
@@ -135,13 +136,14 @@ function AuthButton() {
   );
 }
 
-export function Shell({ children }: { children: ReactNode }) {
+/** `fill` pins the page to the screen and lets the page scroll inside itself, as a chat needs. */
+export function Shell({ children, fill = false }: { children: ReactNode; fill?: boolean }) {
   const { t } = useApp();
   const pathname = usePathname();
   // Before sign-in every tab leads back to the sign-in page, so it shows none of them.
   const signingIn = pathname === "/login";
   return (
-    <div className={signingIn ? "shell shell-bare" : "shell"}>
+    <div className={["shell", signingIn && "shell-bare", fill && "shell-fill"].filter(Boolean).join(" ")}>
       {!signingIn && (
         <nav className="nav" aria-label="Daari">
           <Link href="/" className="nav-brand">Daari</Link>

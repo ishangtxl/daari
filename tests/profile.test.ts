@@ -17,6 +17,12 @@ describe("mergeProfile", () => {
     expect(mergeProfile(start, { skills: [] }).skills).toEqual(["Replacing screens"]);
   });
 
+  it("keeps what they came for until they say something different", () => {
+    const start = { ...emptyProfile(), goal: "learn" as const };
+    expect(mergeProfile(start, { goal: "" }).goal).toBe("learn");
+    expect(mergeProfile(start, { goal: "job" }).goal).toBe("job");
+  });
+
   it("does not forget a known answer when new text does not mention it", () => {
     const merged = mergeProfile({ ...emptyProfile(), hasIti: false }, { hasIti: null });
     expect(merged.hasIti).toBe(false);
@@ -54,5 +60,13 @@ describe("parsePay", () => {
     expect(parsePay("Rs 18,000 for 8 hours a day")?.amount).toBe("₹18,000");
     expect(parsePay("As per company norms")).toBeNull();
     expect(parsePay(null)).toBeNull();
+  });
+});
+
+describe("profileSchema", () => {
+  it("reads older saved profiles, and an unknown goal, as no goal yet", async () => {
+    const { profileSchema } = await import("../lib/types");
+    expect(profileSchema.parse({}).goal).toBe("");
+    expect(profileSchema.parse({ goal: "something else" }).goal).toBe("");
   });
 });

@@ -5,7 +5,12 @@ export const langSchema = z.enum(LANGS);
 export type Lang = z.infer<typeof langSchema>;
 export type Localized = Record<Lang, string>;
 
+export const GOALS = ["job", "learn", "resume", "unsure"] as const;
+export type Goal = (typeof GOALS)[number];
+
 export const profileSchema = z.object({
+  // What they came for. Empty until they say, so the counsellor asks first.
+  goal: z.enum(["", ...GOALS]).catch("").default(""),
   name: z.string().max(120).default(""),
   phone: z.string().max(30).default(""),
   area: z.string().max(120).default(""),
@@ -89,3 +94,27 @@ export const resumeSchema = z.object({
   education: z.array(z.string().max(200)).max(8).default([]),
   languages: z.array(z.string().max(60)).max(10).default([]),
 });
+
+/** A YouTube video or playlist picked for a learning step. */
+export type Video = {
+  kind: "video" | "playlist";
+  title: string;
+  channel: string;
+  url: string;
+  thumbnail: string;
+  /** "12:05" for a video, the number of videos for a playlist. */
+  length: string;
+};
+
+export const ROAD_ACTIONS = ["jobs", "learn", "resume", "check", "talk"] as const;
+export type RoadAction = (typeof ROAD_ACTIONS)[number];
+
+/** The plan Daari suggests once it understands someone: a few steps, each done in one part of the app. */
+export type Roadmap = {
+  understood: string;
+  destination: string;
+  steps: { title: string; why: string; action: RoadAction }[];
+  /** What they wanted when it was made, so a changed goal can offer a new plan. */
+  goal: Profile["goal"];
+  at: string;
+};

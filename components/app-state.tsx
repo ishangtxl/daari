@@ -2,12 +2,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { translate, type StringKey } from "@/lib/i18n";
-import { emptyProfile, type Lang, type MatchedJob, type Profile, type ResumeData } from "@/lib/types";
+import { emptyProfile, type Lang, type MatchedJob, type Profile, type ResumeData, type Roadmap, type Video } from "@/lib/types";
 
 // ── Auth user type (mirrors SessionPayload sub-fields returned by /api/auth/session) ──
 export type AuthUser = { id: string; name: string | null; provider: "phone" | "google" };
 
-export type ChatMessage = { id: string; role: "user" | "assistant"; content: string };
+/** A message, or the plan Daari handed over at that point in the conversation. */
+export type ChatMessage = { id: string; role: "user" | "assistant"; content: string; roadmap?: Roadmap };
 export type ApplicationStatus = "statusApplied" | "statusCalled" | "statusInterview" | "statusOffer" | "statusNoReply";
 export type Application = { jobId: string; title: MatchedJob["title"]; employer: string; applyLink: string; status: ApplicationStatus; at: string };
 export type PlanStep = {
@@ -16,6 +17,8 @@ export type PlanStep = {
   time: string;
   practice: string;
   youtube: string;
+  /** Picked videos and playlists. Missing on plans saved before these existed. */
+  videos?: Video[];
   course: { source: string; title: string; url: string } | null;
 };
 
@@ -26,6 +29,8 @@ type Stored = {
   user: AuthUser | null;
   profile: Profile;
   messages: ChatMessage[];
+  /** The latest plan, also shown on Home. */
+  roadmap: Roadmap | null;
   jobs: MatchedJob[] | null;
   roles: string[];
   jobsKey: string;
@@ -42,6 +47,7 @@ const initial = (): Stored => ({
   user: null,
   profile: emptyProfile(),
   messages: [],
+  roadmap: null,
   jobs: null,
   roles: [],
   jobsKey: "",

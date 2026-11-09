@@ -16,10 +16,28 @@ export function PlanSteps({ steps, idPrefix }: { steps: PlanStep[]; idPrefix: st
             <div><dt>{t("takes")}</dt><dd>{step.time}</dd></div>
             <div><dt>{t("practice")}</dt><dd>{step.practice}</dd></div>
           </dl>
+          {step.videos?.length ? (
+            <ul className="videos">
+              {step.videos.map((video) => (
+                <li key={video.url}>
+                  <a className="video" href={video.url} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- small YouTube thumbnail, no resizing needed */}
+                    <img src={video.thumbnail} alt="" width={128} height={72} loading="lazy" />
+                    <span>
+                      <strong>{video.title}</strong>
+                      <span className="video-meta">
+                        {video.channel} · {video.kind === "playlist" ? t("playlistOf", { n: video.length }) : video.length}
+                      </span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="row-actions">
             <a className="btn btn-quiet" href={step.youtube} target="_blank" rel="noreferrer">
               <Icon name="external" size={20} />
-              {t("watchVideos")}
+              {t(step.videos?.length ? "moreVideos" : "watchVideos")}
             </a>
             {step.course && (
               <a className="btn btn-quiet" href={step.course.url} target="_blank" rel="noreferrer">

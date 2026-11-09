@@ -10,6 +10,7 @@ export function mergeProfile(current: Profile, next: Partial<Profile>): Profile 
   const list = (known: string[], fresh: string[] | undefined) => (fresh?.length ? fresh : known);
   return {
     ...current,
+    goal: next.goal || current.goal || "",
     name: pick("name"),
     phone: pick("phone"),
     area: next.area || current.area || "",
