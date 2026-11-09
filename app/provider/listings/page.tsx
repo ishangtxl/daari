@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { emptyDraft, useApp, type PostedListing } from "@/components/app-state";
+import { FeaturedPetals } from "@/components/featured-petals";
 import { Icon, Shell } from "@/components/ui";
 import { postJson, ApiError } from "@/lib/client/api";
-import type { FullJob } from "@/lib/types";
+import type { FullJob, ListingApplicants } from "@/lib/types";
+
+/** What only the server knows about a listing: featured placement and who applied. */
+type ServerInfo = { featured: boolean; featuredRequested: boolean; applicants: number; newApplicants: number };
 
 const MANDATORY_FIELDS = ["businessName", "roleCategory", "locality", "whatsappContact"] as const;
 
@@ -30,38 +34,69 @@ function missingLabels(draft: ReturnType<typeof useApp>["providerDraft"]): strin
   return m;
 }
 
-function ListingCard({ listing, onClose, onRemove }: { listing: PostedListing; onClose: () => void; onRemove: () => void }) {
+/** A posted listing, built the same way as the draft preview so both tabs look alike. */
+function ListingCard({
+  listing,
+  info,
+  onClose,
+  onRemove,
+  onRequestFeatured,
+}: {
+  listing: PostedListing;
+  info?: ServerInfo;
+  onClose: () => void;
+  onRemove: () => void;
+  onRequestFeatured: () => void;
+}) {
   const { t } = useApp();
   const isActive = listing.status === "active";
+  const featured = isActive && Boolean(info?.featured);
   return (
-    <div className={`listing-card ${isActive ? "listing-active" : "listing-closed"}`}>
-      <div className="listing-card-header">
-        <div className="listing-card-meta">
-          <span className={`listing-status-badge ${isActive ? "badge-active" : "badge-closed"}`}>
-            {isActive ? t("providerActiveListings") : t("providerListingClosed")}
-          </span>
-          <span className="listing-card-date">{new Date(listing.postedAt).toLocaleDateString()}</span>
-        </div>
-        <div className="listing-card-actions">
-          {isActive && (
-            <button type="button" className="btn listing-close-btn" onClick={onClose}>
-              <Icon name="close" size={16} />
-              {t("providerCloseListing")}
-            </button>
-          )}
-          {!isActive && (
-            <button type="button" className="btn listing-remove-btn" onClick={onRemove} aria-label="Remove listing">
-              <Icon name="close" size={16} />
-              Remove
-            </button>
-          )}
-        </div>
+    <div className={["draft-preview-card", !isActive && "is-closed", featured && "is-featured"].filter(Boolean).join(" ")}>
+      {featured && <FeaturedPetals />}
+      <div className="draft-preview-header">
+        <span className="badge-direct">{t("directShopBadge")}</span>
+        <span className={`listing-status-badge ${isActive ? "badge-active" : "badge-closed"}`}>
+          {isActive ? t("providerActiveListings") : t("providerListingClosed")}
+        </span>
+        {featured && <span className="badge-featured">{t("featuredBadge")}</span>}
+        <span className="listing-card-date">{new Date(listing.postedAt).toLocaleDateString()}</span>
       </div>
-      <h3 className="listing-card-title">{listing.title}</h3>
-      <p className="listing-card-employer">{listing.employer}</p>
-      <div className="listing-card-details">
-        <span><Icon name="pin" size={16} />{listing.area}</span>
-        <span><Icon name="rupee" size={16} />{listing.salaryText}</span>
+      <h2 className="draft-preview-title">{listing.title}</h2>
+      <p className="draft-preview-employer">{listing.employer}</p>
+      <div className="draft-preview-details">
+        <span className="draft-detail"><Icon name="pin" size={16} />{listing.area}</span>
+        <span className="draft-detail"><Icon name="rupee" size={16} />{listing.salaryText}</span>
+        {info && (
+          <Link href="/provider/applicants" className="draft-detail draft-detail-link">
+            <Icon name="users" size={16} />
+            {t("applicantsCount", { n: info.applicants })}
+            {info.newApplicants > 0 && <span className="filter-badge">{info.newApplicants}</span>}
+          </Link>
+        )}
+      </div>
+      <div className="listing-preview-actions">
+        {isActive && !featured && !info?.featuredRequested && (
+          <button type="button" className="btn btn-quiet" onClick={onRequestFeatured}>
+            <Icon name="star" size={16} />
+            {t("providerRequestFeatured")}
+          </button>
+        )}
+        {isActive && !featured && info?.featuredRequested && (
+          <span className="draft-detail"><Icon name="check" size={16} />{t("providerFeaturedRequested")}</span>
+        )}
+        {featured && <span className="draft-detail"><Icon name="star" size={16} />{t("providerFeaturedLive")}</span>}
+        {isActive ? (
+          <button type="button" className="btn listing-close-btn" onClick={onClose}>
+            <Icon name="close" size={16} />
+            {t("providerCloseListing")}
+          </button>
+        ) : (
+          <button type="button" className="btn listing-remove-btn" onClick={onRemove} aria-label="Remove listing">
+            <Icon name="close" size={16} />
+            Remove
+          </button>
+        )}
       </div>
     </div>
   );
@@ -76,6 +111,41 @@ export default function ProviderListings() {
   const [problem, setProblem] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [tab, setTab] = useState<"draft" | "listings">("draft");
+  const [info, setInfo] = useState<Record<string, ServerInfo>>({});
+
+  const loadInfo = useCallback(async () => {
+    try {
+      const res = await fetch("/api/provider/applicants", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { listings: ListingApplicants[] };
+      // A listing the server no longer has (or has closed) cannot be live, whatever this account last saved.
+      const liveOnServer = new Set(data.listings.filter((l) => l.listing.status === "active").map((l) => l.listing.id));
+      update((current) =>
+        current.postedListings.some((l) => l.status === "active" && !liveOnServer.has(l.id))
+          ? { postedListings: current.postedListings.map((l) => (l.status === "active" && !liveOnServer.has(l.id) ? { ...l, status: "closed" } : l)) }
+          : {},
+      );
+      setInfo(
+        Object.fromEntries(
+          data.listings.map(({ listing, applicants }) => [
+            listing.id,
+            {
+              featured: listing.featured,
+              featuredRequested: listing.featuredRequested,
+              applicants: applicants.length,
+              newApplicants: applicants.filter((a) => a.status === "new").length,
+            },
+          ]),
+        ),
+      );
+    } catch {
+      // The cards still work without the extras.
+    }
+  }, [update]);
+
+  useEffect(() => {
+    if (ready && tab === "listings") void loadInfo();
+  }, [ready, tab, postedListings.length, loadInfo]);
 
   if (!ready) return <Shell><span /></Shell>;
 
@@ -173,6 +243,25 @@ export default function ProviderListings() {
     update((current) => ({
       postedListings: current.postedListings.map((l) => l.id === id ? { ...l, status: "closed" } : l),
     }));
+  }
+
+  async function handleRequestFeatured(id: string) {
+    try {
+      const res = await fetch(`/api/jobs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "request_featured" }),
+      });
+      if (!res.ok) {
+        // 404 means the server has no such listing; reloading marks it closed here so it stops showing as live.
+        if (res.status === 404) await loadInfo();
+        else setProblem(t("genericError"));
+        return;
+      }
+      await loadInfo();
+    } catch {
+      setProblem(t("genericError"));
+    }
   }
 
   function handleRemove(id: string) {
@@ -329,7 +418,14 @@ export default function ProviderListings() {
                     <h2 className="listings-section-title">{t("providerActiveListings")}</h2>
                     <div className="listings-grid">
                       {active.map((l) => (
-                        <ListingCard key={l.id} listing={l} onClose={() => handleClose(l.id)} onRemove={() => handleRemove(l.id)} />
+                        <ListingCard
+                          key={l.id}
+                          listing={l}
+                          info={info[l.id]}
+                          onClose={() => handleClose(l.id)}
+                          onRemove={() => handleRemove(l.id)}
+                          onRequestFeatured={() => handleRequestFeatured(l.id)}
+                        />
                       ))}
                     </div>
                   </section>
@@ -339,7 +435,14 @@ export default function ProviderListings() {
                     <h2 className="listings-section-title">{t("providerClosedListings")}</h2>
                     <div className="listings-grid">
                       {closed.map((l) => (
-                        <ListingCard key={l.id} listing={l} onClose={() => handleClose(l.id)} onRemove={() => handleRemove(l.id)} />
+                        <ListingCard
+                          key={l.id}
+                          listing={l}
+                          info={info[l.id]}
+                          onClose={() => handleClose(l.id)}
+                          onRemove={() => handleRemove(l.id)}
+                          onRequestFeatured={() => handleRequestFeatured(l.id)}
+                        />
                       ))}
                     </div>
                   </section>

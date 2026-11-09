@@ -1,36 +1,23 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { ROLES } from "../roles";
 import type { FullJob, Job, MatchedJob, Profile, StopStatus } from "../types";
 import { fitBand, isRisky } from "../rank";
 import { decide, type Question } from "./jev";
+import { getActiveJobsSync } from "./jobs-store";
 
 let catalog: Job[] | null = null;
-let postedCache: { mtime: number; jobs: FullJob[] } | null = null;
 
 function getPostedJobsSync(): FullJob[] {
   try {
-    const filePath = path.join(process.cwd(), "data/posted_jobs.json");
-    if (!existsSync(filePath)) return [];
-    const stat = statSync(filePath);
-    if (postedCache && postedCache.mtime === stat.mtimeMs) {
-      return postedCache.jobs;
-    }
-    const raw = readFileSync(filePath, "utf8");
-    const parsed = JSON.parse(raw);
-    const nowIso = new Date().toISOString();
-    const active = (Array.isArray(parsed) ? parsed : []).filter((j: FullJob) => {
-      if (j.metadata?.status && j.metadata.status !== "active") return false;
-      if (j.metadata?.expiresAt && j.metadata.expiresAt < nowIso) return false;
-      return true;
-    });
-    postedCache = { mtime: stat.mtimeMs, jobs: active };
-    return active;
-  } catch {
+    return getActiveJobsSync();
+  } catch (error) {
+    console.error("[match] Could not read posted jobs:", error);
     return [];
   }
 }
 
+/** Live provider listings first (newest first), then the catalog. */
 export function allJobs(): FullJob[] {
   catalog ??= JSON.parse(readFileSync(path.join(process.cwd(), "data/jobs.json"), "utf8")) as Job[];
   const posted = getPostedJobsSync();

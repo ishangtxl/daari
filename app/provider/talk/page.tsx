@@ -365,6 +365,9 @@ export default function ProviderTalk() {
                     {t("providerGoToListing")}
                   </Link>
                 )}
+                {ready_ && !(providerDraft.landmark.trim() && providerDraft.customNotes.trim() && providerDraft.requirements.length) && (
+                  <p className="provider-optional-hint">{t("providerOptionalHint")}</p>
+                )}
               </div>
             )}
           </div>

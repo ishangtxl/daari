@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
-import { closeJob, getJobById } from "@/lib/server/jobs-store";
+import { closeJob, getJobById, requestFeatured } from "@/lib/server/jobs-store";
 import { allJobs } from "@/lib/server/match";
 
 export async function GET(
@@ -32,6 +32,15 @@ export async function PATCH(
       return NextResponse.json({ ok: false, error: "Failed to close job or not owner" }, { status: 403 });
     }
     return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "request_featured") {
+    const result = requestFeatured(id, session.sub);
+    if (!result.ok) {
+      const status = result.reason === "not_found" ? 404 : result.reason === "not_owner" ? 403 : 409;
+      return NextResponse.json({ ok: false, error: result.reason }, { status });
+    }
+    return NextResponse.json({ ok: true, approved: result.approved });
   }
 
   return NextResponse.json({ ok: false, error: "Invalid action" }, { status: 400 });

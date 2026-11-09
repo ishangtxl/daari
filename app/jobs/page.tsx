@@ -5,10 +5,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp, type ApplicationStatus } from "@/components/app-state";
 import { Chip, ChipGroup, Sheet } from "@/components/job-controls";
 import { CopyButton, ErrorNote, Icon, Loading, PayText, ReadAloud, RouteLine, Shell, TabebuiaTree } from "@/components/ui";
+import { FeaturedPetals } from "@/components/featured-petals";
 import { errorKey, postJson } from "@/lib/client/api";
 import { ROLES } from "@/lib/roles";
 import { isRisky, sortJobs, type JobSort } from "@/lib/rank";
-import type { MatchedJob } from "@/lib/types";
+import { isFeaturedJob, type MatchedJob } from "@/lib/types";
 
 type DistanceFilter = "all" | "5" | "10" | "20";
 type SalaryFilter = "all" | "5000" | "10000" | "20000";
@@ -20,6 +21,37 @@ const SALARY_LABEL = { all: "anySalary", "5000": "salary5000Plus", "10000": "sal
 
 function OpenJobs() {
   const { t, effectiveLang, profile, jobs, jobsKey, update } = useApp();
+  // Pulled out so the featured group and the regular group render identical rows.
+  const renderJob = (job: MatchedJob) => {
+    const featured = !isRisky(job) && isFeaturedJob(job);
+    return (
+      <li key={job.id} className={featured ? "job-featured" : undefined}>
+        {featured && <FeaturedPetals />}
+        <Link href={`/jobs/${job.id}`} className="job-row">
+          <div className="job-row-head">
+            <div>
+              {(featured || job.publisher === "Daari Direct" || job.metadata) && (
+                <div className="job-tag-row" style={{ marginBottom: "4px" }}>
+                  {featured && <span className="badge-featured"><Icon name="star" size={14} />{t("featuredBadge")}</span>}
+                  <span className="badge-direct">{t("directShopBadge")}</span>
+                  {job.metadata?.verification?.isVerified && <span className="badge-verified">{t("verifyBadge")}</span>}
+                </div>
+              )}
+              <h3>{job.title[effectiveLang]}</h3>
+            </div>
+            <PayText className="job-pay" text={job.salaryText} />
+          </div>
+          <p className="job-where">
+            {job.employer}, {job.area}
+            {distanceByJobId?.[job.id] != null && <> · {t("distanceAway", { distance: distanceByJobId[job.id]!.toFixed(1) })}</>}
+          </p>
+          <RouteLine stops={job.stops} />
+          <p className="job-meets">{t("meets", { met: job.met, total: job.stops.length })}</p>
+          {isRisky(job) && <p className="job-warning"><Icon name="warning" size={18} />{t("warnListing")}</p>}
+        </Link>
+      </li>
+    );
+  };
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [location, setLocation] = useState(profile.area);
@@ -202,6 +234,7 @@ function OpenJobs() {
           {distanceEnabled && <Chip selected={sortBy === "distance"} icon="pin" onClick={() => setSortBy("distance")}>{t("chipNear")}</Chip>}
           <Chip selected={sortBy === "qualification"} icon="tool" onClick={() => setSortBy("qualification")}>{t("eligibilitySort")}</Chip>
           <Chip selected={sortBy === "salary"} icon="rupee" onClick={() => setSortBy("salary")}>{t("chipPay")}</Chip>
+          <Chip selected={sortBy === "featured"} icon="star" onClick={() => setSortBy("featured")}>{t("chipFeatured")}</Chip>
         </ChipGroup>
         <button type="button" className="btn btn-quiet filter-button" onClick={() => setSheetOpen(true)}>
           <Icon name="filter" size={22} />
@@ -252,35 +285,7 @@ function OpenJobs() {
         <>
           <p className="job-results-count">{t("showingJobs", { count: filteredJobs.length })}</p>
           {distanceByJobId !== null && <p className="distance-attribution">{t("distanceAttribution")} · <span translate="no">Google Maps · Powered by Google, ©2026 Google</span></p>}
-          <ul className="job-list">
-            {filteredJobs.map((job) => (
-              <li key={job.id}>
-                <Link href={`/jobs/${job.id}`} className="job-row">
-                  <div className="job-row-head">
-                    <div>
-                      {(job.publisher === "Daari Direct" || (job as any).metadata) && (
-                        <div className="job-tag-row" style={{ marginBottom: "4px" }}>
-                          <span className="badge-direct">{t("directShopBadge")}</span>
-                          {(job as any).metadata?.verification?.isVerified && (
-                            <span className="badge-verified">{t("verifyBadge")}</span>
-                          )}
-                        </div>
-                      )}
-                      <h3>{job.title[effectiveLang]}</h3>
-                    </div>
-                    <PayText className="job-pay" text={job.salaryText} />
-                  </div>
-                  <p className="job-where">
-                    {job.employer}, {job.area}
-                    {distanceByJobId?.[job.id] != null && <> · {t("distanceAway", { distance: distanceByJobId[job.id]!.toFixed(1) })}</>}
-                  </p>
-                  <RouteLine stops={job.stops} />
-                  <p className="job-meets">{t("meets", { met: job.met, total: job.stops.length })}</p>
-                  {isRisky(job) && <p className="job-warning"><Icon name="warning" size={18} />{t("warnListing")}</p>}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <ul className="job-list">{filteredJobs.map(renderJob)}</ul>
         </>
       ) : (
         <div className="empty-filter-results">

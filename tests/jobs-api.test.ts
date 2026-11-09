@@ -1,6 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { validateBusinessProof, screenJobScam } from "../lib/server/job-verification";
 import { getActiveJobs, saveJob, getJobById, closeJob } from "../lib/server/jobs-store";
@@ -469,9 +467,5 @@ describe("Jobs API HTTP Endpoints (/api/jobs and /api/jobs/[id])", () => {
 
     await closeJob("job_dup_existing", "+917777777777");
     expect((await post({})).status).not.toBe(409);
-  });
-  afterAll(async () => {
-    const storePath = path.join(process.cwd(), "data", "posted_jobs.json");
-    await fs.writeFile(storePath, JSON.stringify([], null, 2), "utf-8");
   });
 });

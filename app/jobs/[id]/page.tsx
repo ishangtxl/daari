@@ -8,7 +8,7 @@ import { PlanSteps } from "@/components/plan-steps";
 import { CopyButton, ErrorNote, Icon, Loading, PayText, ReadAloud, Shell } from "@/components/ui";
 import { VoiceInput } from "@/components/voice";
 import { errorKey, postJson } from "@/lib/client/api";
-import type { MatchedJob, StopStatus } from "@/lib/types";
+import { isFeaturedJob, type MatchedJob, type StopStatus } from "@/lib/types";
 
 type Kit = {
   message_en: string;
@@ -59,6 +59,36 @@ function ApplyKit({ job }: { job: MatchedJob }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const applied = applications.some((item) => item.jobId === job.id);
+  const isDirect = Boolean(job.metadata);
+  const [applying, setApplying] = useState(false);
+  const [applyProblem, setApplyProblem] = useState<string | null>(null);
+
+  async function markApplied() {
+    setApplyProblem(null);
+    if (isDirect) {
+      // A shop listing: the provider sees this seeker under Applicants, with the profile as it is now.
+      setApplying(true);
+      try {
+        const res = await fetch(`/api/jobs/${job.id}/apply`, { method: "POST" });
+        if (!res.ok) {
+          const code = ((await res.json().catch(() => ({}))) as { error?: string }).error;
+          setApplyProblem(code === "own_listing" ? t("applyOwnListing") : code === "closed" ? t("applyListingClosed") : t("genericError"));
+          return;
+        }
+      } catch {
+        setApplyProblem(t("genericError"));
+        return;
+      } finally {
+        setApplying(false);
+      }
+    }
+    update((current) => ({
+      applications: [
+        { jobId: job.id, title: job.title, employer: job.employer, applyLink: job.applyLink, status: "statusApplied", at: new Date().toISOString() },
+        ...current.applications,
+      ],
+    }));
+  }
 
   async function load() {
     setBusy(true);
@@ -87,22 +117,11 @@ function ApplyKit({ job }: { job: MatchedJob }) {
           {job.applyLink.includes("wa.me") ? t("chatOnWhatsApp") : t("openApply")}
         </a>
       )}
-      <button
-        type="button"
-        className="btn btn-quiet"
-        disabled={applied}
-        onClick={() =>
-          update((current) => ({
-            applications: [
-              { jobId: job.id, title: job.title, employer: job.employer, applyLink: job.applyLink, status: "statusApplied", at: new Date().toISOString() },
-              ...current.applications,
-            ],
-          }))
-        }
-      >
+      <button type="button" className="btn btn-quiet" disabled={applied || applying} onClick={() => void markApplied()}>
         {applied && <Icon name="check" size={20} />}
-        {applied ? t("statusApplied") : t("markApplied")}
+        {applied ? t("statusApplied") : isDirect ? t("applyOnDaari") : t("markApplied")}
       </button>
+      {applyProblem && <ErrorNote text={applyProblem} />}
     </div>
   );
 
@@ -253,6 +272,7 @@ export default function JobDetail() {
             {(job.publisher === "Daari Direct" || (job as any).metadata) && (
               <span className="badge-direct">{t("directShopBadge")}</span>
             )}
+            {isFeaturedJob(job) && <span className="badge-featured">{t("featuredBadge")}</span>}
             {(job as any).metadata?.verification?.isVerified && (
               <span className="badge-verified">{t("verifyBadge")}</span>
             )}

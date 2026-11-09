@@ -6,7 +6,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 
-const PUBLIC_PREFIXES = ["/login", "/api/auth/"];
+// /api/admin/ has no session: it is closed unless the request carries the ADMIN_SECRET header, which the route checks itself.
+const PUBLIC_PREFIXES = ["/login", "/api/auth/", "/api/admin/"];
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],

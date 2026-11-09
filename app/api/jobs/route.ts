@@ -8,7 +8,7 @@ import {
   validateBusinessProof,
   type JobPostInput,
 } from "@/lib/server/job-verification";
-import type { BusinessVerification, FullJob } from "@/lib/types";
+import { isFeaturedJob, type BusinessVerification, type FullJob } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
     const minSalaryStr = searchParams.get("minSalary");
     const minSalary = minSalaryStr ? Number(minSalaryStr) : undefined;
     const source = searchParams.get("source");
+    const featuredOnly = searchParams.get("featured") === "true";
 
     const jobs = source === "direct" ? await getActiveJobs() : allJobs();
 
@@ -38,6 +39,9 @@ export async function GET(req: NextRequest) {
     if (minSalary && !isNaN(minSalary)) {
       filtered = filtered.filter((j) => (j.salaryMin ?? 0) >= minSalary);
     }
+    if (featuredOnly) {
+      filtered = filtered.filter(isFeaturedJob);
+    }
     if (query) {
       filtered = filtered.filter(
         (j) =>
@@ -48,6 +52,11 @@ export async function GET(req: NextRequest) {
           j.employer?.toLowerCase().includes(query) ||
           j.description?.toLowerCase().includes(query),
       );
+    }
+
+    // Featured listings stay where they are unless the caller asks for ?sort=featured (stable: the rest keep their order).
+    if (searchParams.get("sort") === "featured") {
+      filtered = [...filtered].sort((a, b) => Number(isFeaturedJob(b)) - Number(isFeaturedJob(a)));
     }
 
     return NextResponse.json({ ok: true, jobs: filtered });

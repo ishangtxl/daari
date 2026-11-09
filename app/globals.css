@@ -1832,6 +1832,7 @@ body:has(dialog[open]) { overflow: hidden; }
 .provider-draft-status.is-partial { background: #fff8e1; color: #7a5500; }
 .provider-draft-status.is-ready { background: var(--clear-wash); color: var(--met); }
 .provider-go-btn { margin-left: auto; font-size: 15px; min-height: 44px; white-space: nowrap; }
+.provider-optional-hint { flex-basis: 100%; margin: 0; font-size: 14px; font-weight: 500; color: var(--muted); }
 
 /* ── Provider listings page ── */
 .provider-draft-tab, .provider-listings-tab { display: flex; flex-direction: column; gap: 20px; padding-top: 16px; }
@@ -1877,6 +1878,76 @@ body:has(dialog[open]) { overflow: hidden; }
 .listing-card-employer { color: var(--muted); font-size: 15px; margin: -2px 0 0; }
 .listing-card-details { display: flex; flex-wrap: wrap; gap: 12px; }
 .listing-card-details span { display: inline-flex; align-items: center; gap: 5px; font-size: 15px; color: var(--muted); font-weight: 600; }
+/* Posted listings reuse .draft-preview-card so both tabs share one structure */
+.draft-preview-header { flex-wrap: wrap; }
+.draft-preview-card.is-closed { opacity: 0.65; border-color: var(--line); box-shadow: none; }
+.draft-detail-link { text-decoration: none; color: var(--cobalt); }
+.listing-preview-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.listing-preview-actions .btn { min-height: 40px; font-size: 14px; }
+
+/* Featured listings: they keep their place in the list and are lit up in the cherry-blossom pink of the theme */
+.badge-featured {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; padding: 3px 10px;
+  border-radius: 999px; color: #7a1f4a; border: 1px solid #e58aae;
+  background: linear-gradient(110deg, #ffd9e6 0%, var(--pink) 45%, #ffd9e6 100%); background-size: 200% 100%;
+  box-shadow: 0 1px 4px rgba(214,90,140,0.35);
+}
+.badge-featured .icon { fill: currentColor; }
+.draft-preview-card.is-featured {
+  border-color: #e58aae; background: linear-gradient(180deg, #fff3f8 0%, var(--paper) 60%);
+  box-shadow: 0 6px 20px rgba(214,90,140,0.25);
+}
+.job-list > .job-featured {
+  position: relative; margin: 10px 0; padding-inline: 16px; border-radius: 14px;
+  border: 1.5px solid #f2b3cb; border-inline-start: 8px solid #e58aae;
+  background: linear-gradient(135deg, #fff0f6 0%, #fffafc 55%, #ffe6f0 100%);
+  box-shadow: 0 0 0 3px rgba(244,166,192,0.22), 0 8px 22px rgba(214,90,140,0.22);
+}
+/* A few blossom petals drift down-left across featured cards, like the tabebuia tree petals; they sit behind the text */
+.job-list > .job-featured, .draft-preview-card.is-featured { position: relative; isolation: isolate; overflow: hidden; }
+.featured-petals {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+.job-list > .job-featured .job-row,
+.draft-preview-card.is-featured > *:not(.featured-petals) {
+  position: relative;
+  z-index: 1;
+}
+.job-featured .job-row { border-bottom: 0; }
+.job-featured .job-row-head h3 { font-size: 1.15em; color: var(--cobalt-deep); }
+.job-featured .job-pay { color: #9b2c5e; }
+@media (prefers-reduced-motion: no-preference) {
+  .badge-featured { animation: featured-shimmer 3.2s ease-in-out infinite; }
+  @keyframes featured-shimmer { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+}
+
+/* Applicants */
+.applicants-section + .applicants-section { margin-top: 12px; }
+.applicant-card { background: var(--paper); border: 2px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.applicant-card.is-shortlisted, .applicant-card.is-hired { border-color: var(--met); }
+.applicant-card.is-rejected { opacity: 0.65; }
+.applicant-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.applicant-name { font-size: 19px; font-weight: 800; margin: 0; overflow-wrap: anywhere; }
+.applicant-chip { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 10px; border-radius: 999px; background: var(--sky); color: var(--cobalt); white-space: nowrap; }
+.applicant-chip.chip-shortlisted, .applicant-chip.chip-hired { background: var(--clear-wash); color: var(--met); }
+.applicant-chip.chip-rejected { background: var(--warn-wash); color: var(--warn); }
+.applicant-skill { min-height: 36px; font-size: 14px; padding: 4px 12px; }
+.applicant-profile { display: grid; gap: 8px; margin: 0; padding: 12px; background: var(--sky); border-radius: 8px; }
+.applicant-profile dt { font-weight: 700; font-size: 14px; color: var(--muted); }
+.applicant-profile dd { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+.applicant-locked { color: var(--muted); font-size: 14px; margin: 0; }
+.applicant-actions { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.applicant-status-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+.applicant-status-btn { min-height: 40px; font-size: 14px; padding: 4px 12px; }
+
+
 
 /* Tab dot indicator */
 .tab-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; }
