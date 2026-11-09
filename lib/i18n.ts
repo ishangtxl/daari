@@ -343,7 +343,7 @@ const en = {
   providerClosedListings: "Closed",
   providerDraftListings: "Drafts",
   providerSalaryRange: "₹{min} – ₹{max} / month",
-  providerVacancies: "{n} vacancya",
+  providerVacancies: "{n} vacancies",
   roleChoiceTitle: "How will you use Daari?",
   roleChoiceSeeker: "I am looking for work",
   roleChoiceProvider: "I want to hire workers",
