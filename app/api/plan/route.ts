@@ -4,6 +4,7 @@ import { z } from "zod";
 import { chatJson, looseText } from "@/lib/server/llm";
 import { planPrompt } from "@/lib/server/prompts";
 import { jsonRoute } from "@/lib/server/route";
+import { findVideos } from "@/lib/server/youtube";
 import { langSchema } from "@/lib/types";
 
 type Course = { id: string; source: string; title: string; url: string; topics: string[] };
@@ -34,14 +35,17 @@ export const POST = jsonRoute("plan", schema, async ({ lang, gaps, work }) => {
     { role: "user", content: JSON.stringify({ wanted_work: work, gaps, courses: listing }) },
   ]);
   return {
-    steps: steps.map(({ course_id, youtube_query, ...step }) => {
-      // The model picks by id, so a link can only ever be one from the verified list.
-      const course = catalog.find((item) => item.id === course_id);
-      return {
-        ...step,
-        course: course ? { source: course.source, title: course.title, url: course.url } : null,
-        youtube: `https://www.youtube.com/results?search_query=${encodeURIComponent(youtube_query)}`,
-      };
-    }),
+    steps: await Promise.all(
+      steps.map(async ({ course_id, youtube_query, ...step }) => {
+        // The model picks by id, so a link can only ever be one from the verified list.
+        const course = catalog.find((item) => item.id === course_id);
+        return {
+          ...step,
+          course: course ? { source: course.source, title: course.title, url: course.url } : null,
+          videos: await findVideos(youtube_query, `${step.title}. ${step.why}`, lang),
+          youtube: `https://www.youtube.com/results?search_query=${encodeURIComponent(youtube_query)}`,
+        };
+      }),
+    ),
   };
 }, 15);

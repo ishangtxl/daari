@@ -1,86 +1,55 @@
 /**
- * Auth helpers — JWT-backed OTP tokens and session cookies.
- *
- * OTP flow:   POST /api/auth/otp/send  →  POST /api/auth/otp/verify
- * OAuth flow: GET  /api/auth/oauth/google  →  GET /api/auth/oauth/callback
- *
- * Both flows end by writing a signed, HttpOnly session cookie called `daari_session`.
+ * Signed session cookies. Phone sign-in (Firebase) and Google sign-in both end by writing the same
+ * HttpOnly cookie, `daari_session`, which the proxy checks on every request.
  */
 
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
 
-// ── Constants ────────────────────────────────────────────────────────────────
-
 export const SESSION_COOKIE = "daari_session";
-const OTP_TTL = Number(process.env.OTP_TTL_SECONDS ?? 300);           // 5 min
+// Only tokens made for sessions are accepted as sessions, even if another token shares the secret.
+const AUDIENCE = "daari-session";
 const SESSION_TTL = Number(process.env.SESSION_TTL_SECONDS ?? 2592000); // 30 days
 
-// ── Secret ───────────────────────────────────────────────────────────────────
-
-function getSecret(): Uint8Array {
-  const raw = process.env.AUTH_SECRET;
-  if (!raw) throw new Error("AUTH_SECRET env var is not set");
-  return new TextEncoder().encode(raw);
-}
-
-// ── OTP token (short-lived, carries the phone number) ───────────────────────
-
-export interface OtpPayload extends JWTPayload {
-  phone: string;
-  otp: string;         // hashed with SHA-256
-}
-
-/** Create a 6-digit OTP and return both the plaintext code and a signed JWT. */
-export async function createOtpToken(phone: string): Promise<{ code: string; token: string }> {
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  const hash = await sha256(code);
-  const token = await new SignJWT({ phone, otp: hash } satisfies Partial<OtpPayload>)
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(`${OTP_TTL}s`)
-    .sign(getSecret());
-  return { code, token };
-}
-
-/** Verify an OTP token and check that the supplied code matches. */
-export async function verifyOtpToken(
-  token: string,
-  code: string,
-): Promise<{ ok: true; phone: string } | { ok: false; error: string }> {
-  try {
-    const { payload } = await jwtVerify(token, getSecret());
-    const p = payload as OtpPayload;
-    if (!p.phone || !p.otp) return { ok: false, error: "invalid_token" };
-    const hash = await sha256(code.trim());
-    if (hash !== p.otp) return { ok: false, error: "wrong_otp" };
-    return { ok: true, phone: p.phone };
-  } catch {
-    return { ok: false, error: "expired_token" };
-  }
-}
-
-// ── Session token (long-lived, written into an HttpOnly cookie) ──────────────
-
-export interface SessionPayload extends JWTPayload {
-  sub: string;         // phone number or Google subject ID
+type SessionClaims = {
+  sub: string; // phone number or Google subject ID
   name?: string;
   provider: "phone" | "google";
+};
+
+export type SessionPayload = JWTPayload & SessionClaims;
+
+/**
+ * Google sign-in stays hidden until GOOGLE_SIGNIN=on, because Google rejects the sign-in
+ * until this site's callback address is added to the OAuth client in Google Cloud.
+ */
+export function googleSignInEnabled(): boolean {
+  const env = process.env;
+  return env.GOOGLE_SIGNIN === "on" && Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI);
 }
 
-export async function createSessionToken(payload: Omit<SessionPayload, keyof JWTPayload>): Promise<string> {
+/** Null when AUTH_SECRET is missing or short, so every check fails closed instead of using a default. */
+function authSecret(): Uint8Array | null {
+  const raw = process.env.AUTH_SECRET;
+  return raw && raw.length >= 32 ? new TextEncoder().encode(raw) : null;
+}
+
+export async function createSessionToken(payload: SessionClaims): Promise<string> {
+  const secret = authSecret();
+  if (!secret) throw new Error("AUTH_SECRET must be set to at least 32 characters");
   return new SignJWT(payload as JWTPayload)
     .setProtectedHeader({ alg: "HS256" })
+    .setAudience(AUDIENCE)
     .setIssuedAt()
     .setExpirationTime(`${SESSION_TTL}s`)
-    .sign(getSecret());
+    .sign(secret);
 }
 
-export async function verifySessionToken(
-  token: string,
-): Promise<SessionPayload | null> {
+export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
+  const secret = authSecret();
+  if (!secret) return null;
   try {
-    const { payload } = await jwtVerify(token, getSecret());
+    const { payload } = await jwtVerify(token, secret, { audience: AUDIENCE, algorithms: ["HS256"] });
     return payload as SessionPayload;
   } catch {
     return null;
@@ -89,16 +58,13 @@ export async function verifySessionToken(
 
 /** Read and verify the session cookie. Returns null if absent or invalid. */
 export async function getSession(): Promise<SessionPayload | null> {
-  const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
-  return verifySessionToken(token);
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  return token ? verifySessionToken(token) : null;
 }
 
-/** Write the session cookie (call from API route handlers, not middleware). */
+/** Write the session cookie (call from route handlers). */
 export async function setSessionCookie(sessionToken: string): Promise<void> {
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE, sessionToken, {
+  (await cookies()).set(SESSION_COOKIE, sessionToken, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -107,17 +73,6 @@ export async function setSessionCookie(sessionToken: string): Promise<void> {
   });
 }
 
-/** Clear the session cookie. */
 export async function clearSessionCookie(): Promise<void> {
-  const jar = await cookies();
-  jar.delete(SESSION_COOKIE);
-}
-
-// ── Utility ──────────────────────────────────────────────────────────────────
-
-async function sha256(text: string): Promise<string> {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  (await cookies()).delete(SESSION_COOKIE);
 }

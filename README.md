@@ -7,7 +7,7 @@
 - **Talk:** a counsellor you speak or type to, which learns your experience from your own words. Informal work counts.
 - **Jobs:** real Bangalore listings, ranked by fit, with optional road-distance/salary filters and distance/eligibility/salary sorting. Eligibility sorting ranks jobs with every listed requirement met first, then one unmet requirement, two unmet requirements, and so on. Each requirement is a stop on a route line, so "you meet 4 of 6" is checkable, not an invented percentage.
 - **Places to ask:** many small shops never advertise online, so Daari finds local businesses and drafts a WhatsApp message and call script. These are labelled as not confirmed vacancies.
-- **Learn:** a plan for your gaps, using a verified list of NPTEL and SWAYAM courses plus YouTube searches.
+- **Learn:** a plan for your gaps, using a verified list of NPTEL and SWAYAM courses plus YouTube videos and playlists checked to teach each step.
 - **Apply:** a message for the employer, a call script, documents to carry, and spoken interview practice. You always apply yourself, and an application tracker follows up.
 - **Resume:** written in English from what you said, with lines that your words don't support removed. You read it back in your own language before downloading the PDF.
 - **Check a message:** paste or read out any job message for specific warnings, such as "asks you to pay money".
@@ -23,7 +23,19 @@
 | Local businesses | Google Places, or a Google Maps search when no key is set |
 | Resume PDF | Fixed templates filled from JSON with `@react-pdf/renderer` |
 
-Profiles stay in the browser's local storage, and text is only sent to the server when a feature needs it.
+Each account's conversation, plan, profile, jobs, applications and resume are saved on the server, so they follow the person to any phone they sign in on, and two people on one phone never see each other's details. Only the language choice stays in the browser, for the screens before sign-in.
+
+## Data
+
+Accounts are kept in one SQLite file, through Node's built-in `node:sqlite`, so there is no database server or native module to install. `lib/server/db.ts` opens it and applies the migrations, `lib/server/store.ts` holds every query, and `lib/state.ts` has the schemas both the browser and the server check against.
+
+- **One account's data only.** The account id comes from the signed session cookie (`phone:+91…` or `google:…`), and every query is scoped by it. Nothing the browser sends can choose the account.
+- **Tables.** `users`, then `documents` (one JSON document per part of the account, such as `profile` or `plan`), `messages` (one row per message, in order) and `applications`. They are `STRICT`, check their JSON and allowed values, and delete with their account through foreign keys.
+- **Saving.** The browser sends only what changed, a moment after it changes, with retries. Each save is one transaction. A message sent twice is stored once, and each account keeps its newest 1,000 messages. If two phones change the same part at once, the later save wins.
+- **Migrations.** Each schema change is a new entry at the end of `MIGRATIONS`, applied in order on start and tracked in `PRAGMA user_version`. Never edit one that has shipped.
+- **Deleting.** "Delete my information" removes the account and everything it owns.
+- **Where it lives.** `DATABASE_PATH`, which production requires, so a deploy can never start from an empty file inside a release. Locally it defaults to `.data/daari.db`.
+- **Backups.** The deploy script copies the database before every deploy and at least once a day, keeping a week of copies in `~/daari/backups`. To restore one, stop the app (`sudo systemctl stop daari`), copy the backup over `DATABASE_PATH`, delete any `-wal` and `-shm` files beside it, and start the app again.
 
 ## Running it
 
@@ -38,7 +50,10 @@ X_RAPIDAPI_KEY=
 X_RAPIDAPI_HOST=jsearch.p.rapidapi.com
 GOOGLE_PLACES_API_KEY=   # optional; used by Places to ask
 GOOGLE_ROUTES_API_KEY= # optional; server-side Routes API key, enables road-distance filters
+YOUTUBE_API_KEY=       # optional; picks real videos and playlists for learning plans
 ```
+
+Every page needs sign-in, by phone through Firebase or with Google, so `AUTH_SECRET` and the Firebase and Google keys in `.env.example` are needed too. Firebase test numbers sign in with a fixed code and send no SMS. The Google button stays hidden until `GOOGLE_SIGNIN=on`, which should be set only after `GOOGLE_REDIRECT_URI` is added as an authorised redirect URI in Google Cloud.
 
 ```
 pnpm install

@@ -11,7 +11,7 @@ const COLUMNS = 22;
 const ROWS = 5;
 
 /** Live voice level drawn in yellow cells, read straight from the microphone's analyser. */
-function Meter({ read }: { read: () => Uint8Array | null }) {
+export function Meter({ read }: { read: () => Uint8Array | null }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let frame = 0;

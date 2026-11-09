@@ -11,7 +11,7 @@ const displayKn = Baloo_Tamma_2({ subsets: ["kannada"], weight: ["600", "700", "
 
 export const metadata: Metadata = {
   title: "Daari",
-  description: "A job counsellor you can talk to in Kannada, Hindi or English, for job seekers in Bangalore.",
+  description: "A counsellor you can talk to in Kannada, Hindi or English about finding work, learning a skill or making a resume in Bangalore.",
 };
 
 export const viewport: Viewport = {
@@ -19,6 +19,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // The keyboard shrinks the page instead of covering it, so the chat composer stays in view.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useApp, type ChatMessage, type ProviderJobDraft } from "@/components/app-state";
+import { Composer } from "@/components/composer";
 import { ErrorNote, Icon, Loading, ReadAloud, Shell } from "@/components/ui";
-import { VoiceInput } from "@/components/voice";
 import { errorKey, postJson, postRaw } from "@/lib/client/api";
 import { speak } from "@/lib/client/audio";
 
-const newId = () => Math.random().toString(36).slice(2);
+const newId = () => crypto.randomUUID();
+// Close enough to the bottom that new messages should keep the view pinned there.
+const PINNED_PX = 120;
 
 const POPULAR_AREAS = [
   "Jayanagar", "Rajajinagar", "Peenya", "Indiranagar", "Koramangala",
@@ -45,8 +47,6 @@ function missingFields(draft: ProviderJobDraft): string[] {
 
 export default function ProviderTalk() {
   const { ready, t, effectiveLang, providerMessages, providerDraft, update } = useApp();
-  const [typing, setTyping] = useState(false);
-  const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [streaming, setStreaming] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -55,7 +55,8 @@ export default function ProviderTalk() {
   const [localDraft, setLocalDraft] = useState<ProviderJobDraft>(providerDraft);
   const [customAreaInput, setCustomAreaInput] = useState("");
   const [selectedAreaPreset, setSelectedAreaPreset] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pinnedRef = useRef(true);
   const manualCardRef = useRef<HTMLDivElement>(null);
 
   // Sync localDraft from store when it changes externally (e.g. voice updates it)
@@ -63,9 +64,11 @@ export default function ProviderTalk() {
     setLocalDraft((prev) => ({ ...prev, ...providerDraft }));
   }, [providerDraft]);
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [providerMessages.length, streaming, busy]);
+  // Keep the newest message in view, unless the person has scrolled up to read.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el && pinnedRef.current) el.scrollTop = el.scrollHeight;
+  }, [providerMessages.length, streaming, busy, ready]);
 
   // When manual form scrolls up, note it visually
   useEffect(() => {
@@ -84,6 +87,7 @@ export default function ProviderTalk() {
       setLastText({ text, spoken });
       setBusy(true);
       setStreaming(null);
+      pinnedRef.current = true;
       const withUser: ChatMessage[] = retrying ? providerMessages : [...providerMessages, { id: newId(), role: "user", content: text }];
       if (!retrying) update({ providerMessages: withUser });
       try {
@@ -140,7 +144,7 @@ export default function ProviderTalk() {
     [effectiveLang, providerMessages, providerDraft, t, update],
   );
 
-  if (!ready) return <Shell><span /></Shell>;
+  if (!ready) return <Shell fill><span /></Shell>;
 
   const greeting = t("providerGreeting");
   const ready_ = isMandatoryFilled(providerDraft);
@@ -318,83 +322,58 @@ export default function ProviderTalk() {
   );
 
   return (
-    <Shell>
+    <Shell fill>
       {manualSheet}
       <div className="talk">
-        <div className="chat">
-          {/* Chat area */}
-          <div className="bubble bubble-assistant">
-            <p>{greeting}</p>
-            <ReadAloud id="provider-greeting" text={greeting} />
-          </div>
-
-          {providerMessages.map((message) =>
-            message.role === "assistant" ? (
-              <div key={message.id} className="bubble bubble-assistant">
-                <p>{message.content}</p>
-                <ReadAloud id={message.id} text={message.content} />
+        <div
+          className="chat"
+          ref={scrollRef}
+          onScroll={(event) => {
+            const el = event.currentTarget;
+            pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < PINNED_PX;
+          }}
+        >
+          <div className="chat-inner" aria-live="polite">
+            {providerMessages.length === 0 && (
+              <div className="bubble bubble-assistant">
+                <p>{greeting}</p>
+                <ReadAloud id="provider-greeting" text={greeting} />
               </div>
-            ) : (
-              <div key={message.id} className="bubble bubble-user"><p>{message.content}</p></div>
-            ),
-          )}
-          {streaming !== null && <div className="bubble bubble-assistant"><p>{streaming}</p></div>}
-          {busy && streaming === null && <Loading text={t("providerThinking")} stops={3} />}
-          {problem && lastText && <ErrorNote text={problem} onRetry={() => send(lastText.text, lastText.spoken, true)} />}
+            )}
 
-          {/* Draft status banner */}
-          {(providerDraft.businessName || providerDraft.locality || providerDraft.roleCategory) && !busy && (
-            <div className={`provider-draft-status ${ready_ ? "is-ready" : "is-partial"}`}>
-              <Icon name={ready_ ? "check" : "tool"} size={18} />
-              <span>{ready_ ? t("providerReadyToPost") : t("providerMissingFields", { fields: missing.join(", ") })}</span>
-              {ready_ && (
-                <Link href="/provider/listings" className="btn btn-primary provider-go-btn">
-                  {t("providerGoToListing")}
-                </Link>
-              )}
-            </div>
-          )}
+            {providerMessages.map((message) =>
+              message.role === "assistant" ? (
+                <div key={message.id} className="bubble bubble-assistant">
+                  <p>{message.content}</p>
+                  <ReadAloud id={message.id} text={message.content} />
+                </div>
+              ) : (
+                <div key={message.id} className="bubble bubble-user"><p>{message.content}</p></div>
+              ),
+            )}
+            {streaming !== null && <div className="bubble bubble-assistant"><p>{streaming}</p></div>}
+            {busy && streaming === null && <Loading text={t("providerThinking")} stops={3} />}
+            {problem && lastText && <ErrorNote text={problem} onRetry={() => send(lastText.text, lastText.spoken, true)} />}
 
-          <div ref={endRef} />
+            {/* Draft status banner */}
+            {(providerDraft.businessName || providerDraft.locality || providerDraft.roleCategory) && !busy && (
+              <div className={`provider-draft-status ${ready_ ? "is-ready" : "is-partial"}`}>
+                <Icon name={ready_ ? "check" : "tool"} size={18} />
+                <span>{ready_ ? t("providerReadyToPost") : t("providerMissingFields", { fields: missing.join(", ") })}</span>
+                {ready_ && (
+                  <Link href="/provider/listings" className="btn btn-primary provider-go-btn">
+                    {t("providerGoToListing")}
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="dock">
-          {/* Voice / type input */}
-          {typing ? (
-            <form
-              className="dock-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const text = draft.trim();
-                if (!text || busy) return;
-                setDraft("");
-                send(text, false);
-              }}
-            >
-              <input
-                aria-label={t("typeHere")}
-                placeholder={t("typeHere")}
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                autoFocus
-              />
-              <button type="submit" className="btn btn-primary" disabled={busy || !draft.trim()} aria-label={t("send")}>
-                <Icon name="send" />
-              </button>
-            </form>
-          ) : (
-            <VoiceInput onText={(text) => send(text, true)} />
-          )}
+          <Composer onSend={(text, spoken) => void send(text, spoken)} busy={busy} hint={providerMessages.length === 0} />
           <div className="dock-actions-row">
-            <button type="button" className="dock-switch" onClick={() => setTyping((v) => !v)}>
-              <Icon name={typing ? "mic" : "keyboard"} size={20} />
-              {typing ? t("talkInstead") : t("typeInstead")}
-            </button>
-            <button
-              type="button"
-              className="dock-switch dock-fill-btn"
-              onClick={() => setShowManual(true)}
-            >
+            <button type="button" className="dock-switch dock-fill-btn" onClick={() => setShowManual(true)}>
               <Icon name="tool" size={20} />
               {t("providerManualFill")}
             </button>

@@ -34,6 +34,7 @@ const PATHS: Record<string, ReactNode> = {
   close: <path d="M6 6l12 12M18 6L6 18" />,
   list: <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />,
   users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>,
+  compass: <><circle cx="12" cy="12" r="9" /><path d="M15.5 8.5l-2 5-5 2 2-5z" /></>,
 };
 
 export function Icon({ name, size = 24 }: { name: keyof typeof PATHS | string; size?: number }) {
@@ -146,13 +147,15 @@ function AuthButton() {
   );
 }
 
-export function Shell({ children, hideNav }: { children: ReactNode; hideNav?: boolean }) {
+/** `fill` pins the page to the screen and lets the page scroll inside itself, as a chat needs. */
+export function Shell({ children, hideNav, fill = false }: { children: ReactNode; hideNav?: boolean; fill?: boolean }) {
   const { t, role } = useApp();
   const pathname = usePathname();
+  // Before sign-in every tab leads back to the sign-in page, so it shows none of them.
   const isAuth = pathname === "/login" || hideNav;
   const nav = role === "job_provider" ? PROVIDER_NAV : SEEKER_NAV;
   return (
-    <div className={`shell${isAuth ? " shell-auth" : ""}${role === "job_provider" ? " shell-provider" : ""}`}>
+    <div className={["shell", isAuth && "shell-auth", role === "job_provider" && "shell-provider", fill && "shell-fill"].filter(Boolean).join(" ")}>
       {!isAuth && (
         <nav className="nav" aria-label="Daari" style={role === "job_provider" ? { gridTemplateColumns: `repeat(${nav.length}, 1fr)` } : undefined}>
           <Link href="/" className="nav-brand">Daari</Link>
