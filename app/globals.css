@@ -514,6 +514,8 @@ body:has(dialog[open]) { overflow: hidden; }
   .sheet { margin: auto; border-radius: 16px; }
 }
 
+.load-failed { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 16px; padding: 24px; text-align: center; font-size: 19px; }
+
 /* Auth */
 .topbar { gap: 8px; }
 .auth-btn { min-height: 44px; padding: 6px 14px; border-radius: 999px; font-size: 17px; }

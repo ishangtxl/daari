@@ -71,6 +71,13 @@ Ravi has a 10th pass and no ITI, and spent two years fixing phones at his uncle'
 - Under **Resume**, tap **Delete my information from this phone** and confirm.
 - Expect: your details are gone, the language stays, and Home asks "What work have you done?" again.
 
+## Accounts
+
+- Finish a few steps on one test number, then sign out. Expect: the next screen shows nothing of that person.
+- Sign in with the other test number. Expect: a fresh start, with none of the first person's conversation, plan or jobs.
+- Sign out and back in with the first number, or open the site on another phone. Expect: the conversation, plan, applications and resume are all still there.
+- Under **Resume**, delete your information. Expect: it is gone after a refresh and on any other phone.
+
 ## Eligibility sorting
 
 - Select **Best eligibility match**. The count is based on every listed requirement shown in **You meet X of Y requirements**: skills, education, experience and other criteria.

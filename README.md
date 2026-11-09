@@ -23,7 +23,19 @@
 | Local businesses | Google Places, or a Google Maps search when no key is set |
 | Resume PDF | Fixed templates filled from JSON with `@react-pdf/renderer` |
 
-Profiles stay in the browser's local storage, and text is only sent to the server when a feature needs it.
+Each account's conversation, plan, profile, jobs, applications and resume are saved on the server, so they follow the person to any phone they sign in on, and two people on one phone never see each other's details. Only the language choice stays in the browser, for the screens before sign-in.
+
+## Data
+
+Accounts are kept in one SQLite file, through Node's built-in `node:sqlite`, so there is no database server or native module to install. `lib/server/db.ts` opens it and applies the migrations, `lib/server/store.ts` holds every query, and `lib/state.ts` has the schemas both the browser and the server check against.
+
+- **One account's data only.** The account id comes from the signed session cookie (`phone:+91…` or `google:…`), and every query is scoped by it. Nothing the browser sends can choose the account.
+- **Tables.** `users`, then `documents` (one JSON document per part of the account, such as `profile` or `plan`), `messages` (one row per message, in order) and `applications`. They are `STRICT`, check their JSON and allowed values, and delete with their account through foreign keys.
+- **Saving.** The browser sends only what changed, a moment after it changes, with retries. Each save is one transaction. A message sent twice is stored once, and each account keeps its newest 1,000 messages. If two phones change the same part at once, the later save wins.
+- **Migrations.** Each schema change is a new entry at the end of `MIGRATIONS`, applied in order on start and tracked in `PRAGMA user_version`. Never edit one that has shipped.
+- **Deleting.** "Delete my information" removes the account and everything it owns.
+- **Where it lives.** `DATABASE_PATH`, which production requires, so a deploy can never start from an empty file inside a release. Locally it defaults to `.data/daari.db`.
+- **Backups.** The deploy script copies the database before every deploy and at least once a day, keeping a week of copies in `~/daari/backups`. To restore one, stop the app (`sudo systemctl stop daari`), copy the backup over `DATABASE_PATH`, delete any `-wal` and `-shm` files beside it, and start the app again.
 
 ## Running it
 

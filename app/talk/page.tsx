@@ -13,7 +13,7 @@ import { roadText, transcriptOf } from "@/lib/client/road";
 import type { StringKey } from "@/lib/i18n";
 import { GOALS, type Goal, type Profile, type Roadmap } from "@/lib/types";
 
-const newId = () => Math.random().toString(36).slice(2);
+const newId = () => crypto.randomUUID();
 // Close enough to the bottom that new messages should keep the view pinned there.
 const PINNED_PX = 120;
 

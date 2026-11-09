@@ -16,7 +16,7 @@
  */
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -39,8 +39,7 @@ export function LoginScreen({ google }: { google: boolean }) {
 }
 
 function LoginForm({ google }: { google: boolean }) {
-  const { ready, t, effectiveLang, update } = useApp();
-  const router = useRouter();
+  const { ready, t, effectiveLang } = useApp();
   const params = useSearchParams();
 
   const [stage, setStage] = useState<Stage>("phone");
@@ -168,10 +167,10 @@ function LoginForm({ google }: { google: boolean }) {
     try {
       const credential = await confirmRef.current.confirm(code.trim());
       const idToken = await credential.user.getIdToken();
-      const { user } = await postJson<{ ok: boolean; user: { phone: string; provider: "phone" } }>("/api/auth/firebase", { idToken });
-      // Update app-state immediately so the nav bar flips to "Sign out" before redirect.
-      update({ user: { id: user.phone, name: null, provider: "phone" } });
-      router.replace("/");
+      await postJson("/api/auth/firebase", { idToken });
+      // A full load, not a client-side move: the app then starts from this account's own data,
+      // never from whatever the previous person on this phone left on screen.
+      window.location.replace("/");
     } catch (err: unknown) {
       const fbCode = (err as { code?: string }).code ?? "";
       if (fbCode === "auth/invalid-verification-code") {

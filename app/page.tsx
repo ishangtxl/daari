@@ -64,7 +64,7 @@ export default function Home() {
       const { roadmap: fresh } = await postJson<{ roadmap: Roadmap }>("/api/roadmap", { lang: effectiveLang, profile, transcript: transcriptOf(messages) });
       update((current) => ({
         roadmap: fresh,
-        messages: [...current.messages, { id: Math.random().toString(36).slice(2), role: "assistant", content: roadText(fresh), roadmap: fresh }],
+        messages: [...current.messages, { id: crypto.randomUUID(), role: "assistant", content: roadText(fresh), roadmap: fresh }],
       }));
     } catch {
       setRemakeFailed(true);

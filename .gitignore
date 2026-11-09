@@ -9,3 +9,6 @@ data/raw/
 .spend.jsonl
 *.tsbuildinfo
 next-env.d.ts
+
+# SQLite database for local development (production sets DATABASE_PATH)
+.data/

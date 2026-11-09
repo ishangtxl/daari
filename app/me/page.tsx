@@ -148,7 +148,7 @@ export default function Me() {
         )}
 
         <section className="settings">
-          <button type="button" className="link-button danger" onClick={() => { if (window.confirm(t("clearConfirm"))) clear(); }}>{t("clearData")}</button>
+          <button type="button" className="link-button danger" onClick={async () => { if (window.confirm(t("clearConfirm")) && !(await clear())) window.alert(t("genericError")); }}>{t("clearData")}</button>
         </section>
       </div>
     </Shell>
