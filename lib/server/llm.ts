@@ -104,15 +104,37 @@ export function parseJson(text: string): unknown {
   const noTrailing = raw.replace(/,(\s*[}\]])/g, "$1");
   try { return JSON.parse(noTrailing); } catch { /* fall through */ }
 
-  // Pass 3: replace ALL literal control characters (0x00–0x1f) that appear
-  // outside of already-escaped sequences with their JSON escape equivalents.
-  // This handles bare \n, \r, \t the model inlines into string values.
-  const sanitised = noTrailing.replace(/[\x00-\x1f]/g, (ch) => {
-    if (ch === "\n") return "\\n";
-    if (ch === "\r") return "\\r";
-    if (ch === "\t") return "\\t";
-    return `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`;
-  });
+  // Pass 3: escape literal control characters (0x00–0x1f) that appear INSIDE string
+  // values (bare \n, \r, \t the model inlines). Whitespace between tokens must stay as-is,
+  // otherwise `{\n "a": 1}` becomes `{\\n "a": 1}` which is invalid.
+  let sanitised = "";
+  let inString = false;
+  let escaped = false;
+  for (const ch of noTrailing) {
+    if (!inString) {
+      if (ch === '"') inString = true;
+      sanitised += ch;
+    } else if (escaped) {
+      escaped = false;
+      sanitised += ch;
+    } else if (ch === "\\") {
+      escaped = true;
+      sanitised += ch;
+    } else if (ch === '"') {
+      inString = false;
+      sanitised += ch;
+    } else if (ch === "\n") {
+      sanitised += "\\n";
+    } else if (ch === "\r") {
+      sanitised += "\\r";
+    } else if (ch === "\t") {
+      sanitised += "\\t";
+    } else if (ch < " ") {
+      sanitised += `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`;
+    } else {
+      sanitised += ch;
+    }
+  }
   return JSON.parse(sanitised);
 }
 

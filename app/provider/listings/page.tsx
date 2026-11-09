@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useApp, type PostedListing } from "@/components/app-state";
+import { useRouter } from "next/navigation";
+import { emptyDraft, useApp, type PostedListing } from "@/components/app-state";
 import { Icon, Shell } from "@/components/ui";
 import { postJson, ApiError } from "@/lib/client/api";
 import type { FullJob } from "@/lib/types";
@@ -66,8 +67,11 @@ function ListingCard({ listing, onClose, onRemove }: { listing: PostedListing; o
   );
 }
 
+const norm = (s: string | undefined) => (s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
 export default function ProviderListings() {
   const { ready, t, effectiveLang, providerDraft, postedListings, update, user } = useApp();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -79,6 +83,21 @@ export default function ProviderListings() {
   const missing = missingLabels(providerDraft);
   const active = postedListings.filter((l) => l.status === "active");
   const closed = postedListings.filter((l) => l.status === "closed");
+  // The draft is already live when an active listing has the same shop, role and locality.
+  const draftRole = providerDraft.roleCategory.trim() || providerDraft.customRoleName.trim();
+  const liveMatch = active.find(
+    (l) =>
+      norm(l.employer) === norm(providerDraft.businessName) &&
+      norm(l.roleCategory) === norm(draftRole) &&
+      norm(l.area) === norm(providerDraft.locality),
+  );
+
+  function handlePostNew() {
+    update({ providerDraft: emptyDraft(), providerMessages: [] });
+    setProblem(null);
+    setValidationErrors([]);
+    router.push("/provider/talk");
+  }
 
   async function handlePost() {
     if (!canPost || busy) return;
@@ -112,6 +131,7 @@ export default function ProviderListings() {
         title: job.title[effectiveLang] || job.title.en,
         employer: job.employer,
         area: job.area,
+        roleCategory: job.metadata?.roleCategory,
         salaryText: job.salaryText ?? `₹${providerDraft.salaryMin.toLocaleString("en-IN")}–₹${providerDraft.salaryMax.toLocaleString("en-IN")}`,
         status: "active",
         postedAt: new Date().toISOString(),
@@ -135,7 +155,21 @@ export default function ProviderListings() {
     }
   }
 
-  function handleClose(id: string) {
+  async function handleClose(id: string) {
+    try {
+      const res = await fetch(`/api/jobs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "close" }),
+      });
+      if (!res.ok) {
+        setProblem(t("genericError"));
+        return;
+      }
+    } catch {
+      setProblem(t("genericError"));
+      return;
+    }
     update((current) => ({
       postedListings: current.postedListings.map((l) => l.id === id ? { ...l, status: "closed" } : l),
     }));
@@ -241,7 +275,18 @@ export default function ProviderListings() {
                 </div>
 
                 {/* Post action */}
-                {canPost ? (
+                {liveMatch ? (
+                  <div className="provider-live-banner">
+                    <span className="listing-status-badge badge-active">
+                      <Icon name="check" size={16} />
+                      {t("providerListingPosted")}
+                    </span>
+                    <button type="button" className="btn btn-primary provider-post-btn" onClick={handlePostNew}>
+                      <Icon name="mic" size={20} />
+                      {t("providerPostNewJob")}
+                    </button>
+                  </div>
+                ) : canPost ? (
                   <button
                     type="button"
                     className="btn btn-primary provider-post-btn"

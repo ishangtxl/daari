@@ -408,6 +408,68 @@ describe("Jobs API HTTP Endpoints (/api/jobs and /api/jobs/[id])", () => {
     expect(reqTexts).toContain("Must know Edge Banding & CNC routing");
   });
 
+  it("POST /api/jobs rejects a duplicate active listing but allows a different role or locality", async () => {
+    mockSession = { sub: "+917777777777", name: "Dup Tester", provider: "phone" };
+    await saveJob({
+      id: "job_dup_existing",
+      roles: ["auto_mech"],
+      title: { en: "Mechanic at Dup Garage", hi: "Mechanic", kn: "Mechanic" },
+      summary: { en: "Vacancy", hi: "Vacancy", kn: "Vacancy" },
+      employer: "Dup Garage",
+      area: "Peenya",
+      publisher: "Daari Direct",
+      applyLink: "https://wa.me/917777777777",
+      postedAt: new Date().toISOString(),
+      salaryText: "₹18,000",
+      salaryMin: 18000,
+      genderRestriction: null,
+      requirements: [],
+      signals: { asks_payment: 0, asks_sensitive: 0, unrealistic: 0 },
+      description: "Duplicate check fixture",
+      metadata: {
+        source: "direct_employer",
+        roleCategory: "Mechanic",
+        posterPhone: "+917777777777",
+        posterId: "+917777777777",
+        verification: {
+          proofType: "none",
+          isVerified: false,
+          businessName: "Dup Garage",
+          businessAddress: "Peenya",
+          locality: "Peenya",
+        },
+        whatsappContact: "917777777777",
+        status: "active",
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      },
+    });
+
+    const post = (overrides: Record<string, unknown>) =>
+      postJobRoute(
+        new NextRequest("http://localhost:3000/api/jobs", {
+          method: "POST",
+          body: JSON.stringify({
+            businessName: "Dup Garage",
+            roleCategory: "Mechanic",
+            locality: "Peenya",
+            // Scam wording makes later steps return 422 without a model call, so only the duplicate check decides 409 vs not-409.
+            customNotes: "Pay registration fee",
+            ...overrides,
+          }),
+        }),
+      );
+
+    const dup = await post({ businessName: " dup  garage ", locality: "PEENYA" });
+    expect(dup.status).toBe(409);
+    expect((await dup.json()).existingJobId).toBe("job_dup_existing");
+
+    expect((await post({ locality: "Jayanagar" })).status).not.toBe(409);
+    expect((await post({ roleCategory: "Electrician" })).status).not.toBe(409);
+
+    await closeJob("job_dup_existing", "+917777777777");
+    expect((await post({})).status).not.toBe(409);
+  });
   afterAll(async () => {
     const storePath = path.join(process.cwd(), "data", "posted_jobs.json");
     await fs.writeFile(storePath, JSON.stringify([], null, 2), "utf-8");

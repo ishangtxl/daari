@@ -58,6 +58,13 @@ describe("parseJson", () => {
     expect(parseJson('```json\n{"a": {"b": 2}}\n```')).toEqual({ a: { b: 2 } });
   });
 
+  it("repairs raw newlines inside string values without breaking pretty-printed JSON", () => {
+    expect(parseJson('{\n  "a": "line one\nline two",\n  "b": {"c": "x"}\n}')).toEqual({
+      a: "line one\nline two",
+      b: { c: "x" },
+    });
+  });
+
   it("rejects a reply with no JSON", () => {
     expect(() => parseJson("Sorry, I cannot do that.")).toThrow();
   });

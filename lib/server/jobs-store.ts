@@ -56,6 +56,27 @@ export async function saveJob(job: FullJob): Promise<void> {
   await persist(all);
 }
 
+const norm = (s: string | undefined) => (s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/** An active listing by the same poster for the same business, role and locality. A different role or locality is not a duplicate. */
+export async function findDuplicateActiveJob(
+  posterId: string,
+  businessName: string,
+  roleCategory: string,
+  locality: string,
+): Promise<FullJob | null> {
+  const active = await getActiveJobs();
+  return (
+    active.find(
+      (j) =>
+        j.metadata?.posterId === posterId &&
+        norm(j.employer) === norm(businessName) &&
+        norm(j.metadata.roleCategory) === norm(roleCategory) &&
+        norm(j.area) === norm(locality),
+    ) ?? null
+  );
+}
+
 export async function closeJob(id: string, posterPhone: string): Promise<boolean> {
   const all = await ensureStoreFile();
   const job = all.find((j) => j.id === id);

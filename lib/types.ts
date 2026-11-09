@@ -104,6 +104,8 @@ export type BusinessVerification = {
 
 export type PostedJobMetadata = {
   source: "direct_employer";
+  /** Role as typed/selected by the employer; used with business + locality to detect duplicate postings. */
+  roleCategory?: string;
   posterPhone: string;
   posterName?: string;
   posterId: string;

@@ -164,7 +164,15 @@ export async function enrichJobWithAI(input: JobPostInput): Promise<{
 }> {
   const prompt = `You are Daari's multilingual job structuring engine for Bengaluru trade & vocational workers.
 Given the following direct employer posting, format the job title, a 1-sentence localized summary, and 3-5 concrete requirement stops.
-Output strictly in JSON matching the schema. All string values must be on a single line with no embedded newlines.
+Output ONLY a JSON object with exactly this shape. All string values must be on a single line with no embedded newlines.
+{
+  "title": { "en": "...", "hi": "...", "kn": "..." },
+  "summary": { "en": "...", "hi": "...", "kn": "..." },
+  "requirements": [
+    { "id": "req_1", "en": "...", "hi": "...", "kn": "...", "kind": "skill" }
+  ]
+}
+"kind" must be one of: "skill", "license", "tool", "education". Give 3-5 requirements with ids req_1, req_2, ...
 
 Business Name: ${input.businessName}
 Role Category: ${input.roleCategory}
@@ -184,7 +192,8 @@ Requirements MUST be realistic trade stops in Kannada, Hindi, and English (e.g. 
         { role: "system", content: "You output valid JSON for Daari's job posting catalog." },
         { role: "user", content: prompt },
       ],
-      { model: MODELS.work, maxTokens: 900 },
+      // Hindi and Kannada are token-heavy; 900 truncated the JSON mid-array.
+      { model: MODELS.work, maxTokens: 3000 },
     );
     return result;
   } catch (err) {

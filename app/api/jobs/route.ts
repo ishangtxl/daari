@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getActiveJobs, saveJob } from "@/lib/server/jobs-store";
+import { findDuplicateActiveJob, getActiveJobs, saveJob } from "@/lib/server/jobs-store";
 import { allJobs } from "@/lib/server/match";
 import {
   enrichJobWithAI,
@@ -89,6 +89,19 @@ export async function POST(req: NextRequest) {
     }
     if (!locality?.trim()) {
       return NextResponse.json({ ok: false, error: "Locality in Bengaluru is required." }, { status: 400 });
+    }
+
+    // 0. Same business + role + locality already live for this poster: close it first.
+    const duplicate = await findDuplicateActiveJob(session.sub, businessName, roleCategory, locality);
+    if (duplicate) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "You already have an active listing for this role at this location. Close it before posting it again, or change the role or location.",
+          existingJobId: duplicate.id,
+        },
+        { status: 409 },
+      );
     }
 
     // 1. Business proof validation
@@ -190,6 +203,7 @@ export async function POST(req: NextRequest) {
         : `Direct vacancy at ${input.businessName}, ${bizVerification.businessAddress}`,
       metadata: {
         source: "direct_employer",
+        roleCategory: input.roleCategory,
         posterPhone: session.sub,
         posterName: session.name,
         posterId: session.sub,

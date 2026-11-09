@@ -73,7 +73,7 @@ function ChooseRole() {
 }
 
 function ProviderHome() {
-  const { t, providerDraft, signOut } = useApp();
+  const { t, providerDraft } = useApp();
   const hasDraft = Boolean(providerDraft.businessName || providerDraft.roleCategory || providerDraft.locality);
   return (
     <Shell>
@@ -98,17 +98,6 @@ function ProviderHome() {
           <span>{t("navApplicants")}</span>
         </Link>
       </section>
-      <div style={{ padding: "0 16px 32px" }}>
-        <button
-          type="button"
-          className="link-button"
-          style={{ display: "flex", alignItems: "center", gap: 6 }}
-          onClick={async () => { await signOut(); window.location.href = "/login"; }}
-        >
-          <Icon name="person" size={16} />
-          {t("signOut")}
-        </button>
-      </div>
     </Shell>
   );
 }

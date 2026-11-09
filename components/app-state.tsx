@@ -44,6 +44,8 @@ export type PostedListing = {
   title: string;
   employer: string;
   area: string;
+  /** Role used when posting; with employer + area it identifies the listing a draft would duplicate. */
+  roleCategory?: string;
   salaryText: string;
   status: "active" | "closed";
   postedAt: string;
