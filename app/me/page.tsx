@@ -9,7 +9,7 @@ import { errorKey, postForm, postJson, postRaw } from "@/lib/client/api";
 import type { Profile, ResumeData } from "@/lib/types";
 
 export default function Me() {
-  const { ready, t, effectiveLang, profile, resume, resumeReview, resumeRemoved, update, clear } = useApp();
+  const { ready, t, effectiveLang, profile, resume, resumeReview, resumeRemoved, update, clear, signOut } = useApp();
   const router = useRouter();
   const [busy, setBusy] = useState<"upload" | "build" | "pdf" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -148,6 +148,17 @@ export default function Me() {
         )}
 
         <section className="settings">
+          <button
+            type="button"
+            className="link-button"
+            onClick={async () => {
+              await signOut();
+              router.push("/login");
+            }}
+          >
+            <Icon name="person" size={16} />
+            {t("signOut")}
+          </button>
           <button type="button" className="link-button danger" onClick={async () => { if (window.confirm(t("clearConfirm")) && !(await clear())) window.alert(t("genericError")); }}>{t("clearData")}</button>
         </section>
       </div>

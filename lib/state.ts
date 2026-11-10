@@ -58,9 +58,45 @@ export const applicationSchema = z.object({
 // Matched jobs come from the server's own catalog, so only their size is limited here.
 const jobsSchema = z.array(z.record(z.string(), z.unknown())).max(40);
 
+/** Chosen once on first sign-in: a person looking for work, or one offering it. */
+export const roleSchema = z.enum(["job_seeker", "job_provider"]);
+
+/** A job listing being put together by voice or form, kept so leaving the page loses nothing. */
+export const providerDraftSchema = z.object({
+  businessName: text(300),
+  roleCategory: text(200),
+  customRoleName: text(200),
+  locality: text(300),
+  landmark: text(300),
+  salaryMin: z.number().catch(0),
+  salaryMax: z.number().catch(0),
+  vacancies: z.number().catch(1),
+  requirements: z.array(text(300)).max(30),
+  customNotes: text(2000),
+  whatsappContact: text(40),
+  proofType: text(40),
+  proofValue: text(200),
+});
+
+export const postedListingSchema = z.object({
+  id: text(120),
+  title: text(300),
+  employer: text(300),
+  area: text(300),
+  /** Role used when posting; with employer + area it identifies the listing a draft would duplicate. */
+  roleCategory: text(200).optional(),
+  salaryText: text(120),
+  status: z.enum(["active", "closed"]),
+  postedAt: text(60),
+});
+
 /** The parts of an account saved as one document each. Messages and applications have their own tables. */
 export const documentSchemas = {
   lang: langSchema.nullable(),
+  role: roleSchema.nullable(),
+  providerDraft: providerDraftSchema,
+  providerMessages: z.array(chatMessageSchema).max(200),
+  postedListings: z.array(postedListingSchema).max(200),
   profile: profileSchema,
   roadmap: roadmapSchema.nullable(),
   plan: z.array(planStepSchema).max(6).nullable(),
@@ -83,6 +119,9 @@ export type StatePatch = z.infer<typeof statePatchSchema>;
 
 export const newMessagesSchema = z.object({ messages: z.array(chatMessageSchema).min(1).max(100) });
 
+export type UserRole = z.infer<typeof roleSchema>;
+export type ProviderJobDraft = z.infer<typeof providerDraftSchema>;
+export type PostedListing = z.infer<typeof postedListingSchema>;
 export type Video = z.infer<typeof videoSchema>;
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 export type PlanStep = z.infer<typeof planStepSchema>;

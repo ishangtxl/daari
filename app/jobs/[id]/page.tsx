@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp, type PlanStep } from "@/components/app-state";
 import { PlanSteps } from "@/components/plan-steps";
 import { CopyButton, ErrorNote, Icon, Loading, PayText, ReadAloud, Shell } from "@/components/ui";
 import { VoiceInput } from "@/components/voice";
 import { errorKey, postJson } from "@/lib/client/api";
-import type { MatchedJob, StopStatus } from "@/lib/types";
+import { isFeaturedJob, type MatchedJob, type StopStatus } from "@/lib/types";
 
 type Kit = {
   message_en: string;
@@ -59,6 +59,36 @@ function ApplyKit({ job }: { job: MatchedJob }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const applied = applications.some((item) => item.jobId === job.id);
+  const isDirect = Boolean(job.metadata);
+  const [applying, setApplying] = useState(false);
+  const [applyProblem, setApplyProblem] = useState<string | null>(null);
+
+  async function markApplied() {
+    setApplyProblem(null);
+    if (isDirect) {
+      // A shop listing: the provider sees this seeker under Applicants, with the profile as it is now.
+      setApplying(true);
+      try {
+        const res = await fetch(`/api/jobs/${job.id}/apply`, { method: "POST" });
+        if (!res.ok) {
+          const code = ((await res.json().catch(() => ({}))) as { error?: string }).error;
+          setApplyProblem(code === "own_listing" ? t("applyOwnListing") : code === "closed" ? t("applyListingClosed") : t("genericError"));
+          return;
+        }
+      } catch {
+        setApplyProblem(t("genericError"));
+        return;
+      } finally {
+        setApplying(false);
+      }
+    }
+    update((current) => ({
+      applications: [
+        { jobId: job.id, title: job.title, employer: job.employer, applyLink: job.applyLink, status: "statusApplied", at: new Date().toISOString() },
+        ...current.applications,
+      ],
+    }));
+  }
 
   async function load() {
     setBusy(true);
@@ -75,23 +105,23 @@ function ApplyKit({ job }: { job: MatchedJob }) {
 
   const applyButtons = (
     <div className="row-actions">
-      {job.applyLink && <a className={`btn ${kit ? "btn-primary" : "btn-quiet"}`} href={job.applyLink} target="_blank" rel="noreferrer"><Icon name="external" />{t("openApply")}</a>}
-      <button
-        type="button"
-        className="btn btn-quiet"
-        disabled={applied}
-        onClick={() =>
-          update((current) => ({
-            applications: [
-              { jobId: job.id, title: job.title, employer: job.employer, applyLink: job.applyLink, status: "statusApplied", at: new Date().toISOString() },
-              ...current.applications,
-            ],
-          }))
-        }
-      >
+      {job.applyLink && (
+        <a
+          className={`btn ${kit || job.applyLink.includes("wa.me") ? "btn-primary" : "btn-quiet"}`}
+          style={job.applyLink.includes("wa.me") ? { backgroundColor: "#1e7e34", borderColor: "#1e7e34" } : undefined}
+          href={job.applyLink}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Icon name={job.applyLink.includes("wa.me") ? "mic" : "external"} />
+          {job.applyLink.includes("wa.me") ? t("chatOnWhatsApp") : t("openApply")}
+        </a>
+      )}
+      <button type="button" className="btn btn-quiet" disabled={applied || applying} onClick={() => void markApplied()}>
         {applied && <Icon name="check" size={20} />}
-        {applied ? t("statusApplied") : t("markApplied")}
+        {applied ? t("statusApplied") : isDirect ? t("applyOnDaari") : t("markApplied")}
       </button>
+      {applyProblem && <ErrorNote text={applyProblem} />}
     </div>
   );
 
@@ -154,19 +184,53 @@ export default function JobDetail() {
   const [steps, setSteps] = useState<PlanStep[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [directJob, setDirectJob] = useState<MatchedJob | null>(null);
+  const [loadingJob, setLoadingJob] = useState(false);
 
-  if (!ready) return <Shell><span /></Shell>;
-  const job = jobs?.find((item) => item.id === id);
+  useEffect(() => {
+    if (!ready || !id) return;
+    if (jobs?.some((item) => item.id === id)) return;
+    let active = true;
+    setLoadingJob(true);
+    fetch(`/api/jobs/${id}`)
+      .then((r) => r.json())
+      .then((data: { ok: boolean; job?: any }) => {
+        if (!active) return;
+        if (data.ok && data.job) {
+          const j = data.job;
+          const matched: MatchedJob = {
+            ...j,
+            match: j.match ?? 1.0,
+            met: j.met ?? j.requirements?.length ?? 0,
+            total: j.total ?? j.requirements?.length ?? 0,
+            stops: j.stops ?? j.requirements?.map((r: any) => ({ id: r.id, status: "met" as const })) ?? [],
+          };
+          setDirectJob(matched);
+        }
+      })
+      .catch(() => {
+        /* non-fatal fallback */
+      })
+      .finally(() => {
+        if (active) setLoadingJob(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, jobs, ready]);
+
+  if (!ready || loadingJob) return <Shell><Loading text={t("checkingJobs")} /></Shell>;
+  const job = jobs?.find((item) => item.id === id) ?? directJob;
   const back = <Link href="/jobs" className="back-link"><Icon name="back" size={20} />{t("backToJobs")}</Link>;
   if (!job) return <Shell><div className="page">{back}<p className="empty-text">{t("noProfileBody")}</p></div></Shell>;
 
-  const statusOf = (reqId: string): StopStatus => job.stops.find((stop) => stop.id === reqId)?.status ?? "unsure";
+  const statusOf = (reqId: string): StopStatus => job.stops?.find((stop) => stop.id === reqId)?.status ?? "unsure";
   const order: Record<StopStatus, number> = { met: 0, unsure: 1, gap: 2 };
-  const requirements = [...job.requirements].sort((a, b) => order[statusOf(a.id)] - order[statusOf(b.id)]);
-  const gaps = job.requirements.filter((req) => statusOf(req.id) !== "met");
+  const requirements = [...(job.requirements || [])].sort((a, b) => order[statusOf(a.id)] - order[statusOf(b.id)]);
+  const gaps = (job.requirements || []).filter((req) => statusOf(req.id) !== "met");
   const warnings = [
-    job.signals.asks_payment >= 0.7 && t("signalPayment"),
-    job.signals.asks_sensitive >= 0.7 && t("signalSensitive"),
+    (job.signals?.asks_payment ?? 0) >= 0.7 && t("signalPayment"),
+    (job.signals?.asks_sensitive ?? 0) >= 0.7 && t("signalSensitive"),
   ].filter(Boolean) as string[];
 
   function answer(requirement: string, value: boolean) {
@@ -204,6 +268,15 @@ export default function JobDetail() {
       <div className="page job-page">
         {back}
         <header className="job-head">
+          <div className="job-tag-row">
+            {(job.publisher === "Daari Direct" || (job as any).metadata) && (
+              <span className="badge-direct">{t("directShopBadge")}</span>
+            )}
+            {isFeaturedJob(job) && <span className="badge-featured">{t("featuredBadge")}</span>}
+            {(job as any).metadata?.verification?.isVerified && (
+              <span className="badge-verified">{t("verifyBadge")}</span>
+            )}
+          </div>
           <h1>{job.title[effectiveLang]}</h1>
           <p className="job-where">{job.employer}, {job.area}</p>
           <PayText className="job-pay job-pay-large" text={job.salaryText} />

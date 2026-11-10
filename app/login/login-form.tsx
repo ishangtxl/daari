@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /login  — Firebase Phone Auth (primary) + Google OAuth (secondary).
+ * /login  — splash + "who are you" choice, then Firebase Phone Auth (primary) + Google OAuth (secondary).
  *
  * Firebase Phone Auth flow:
  *   1. User enters phone number → signInWithPhoneNumber()
@@ -24,10 +24,30 @@ import {
 } from "firebase/auth";
 import { firebaseAuth, firebaseConfigured } from "@/lib/firebase-client";
 import { useApp } from "@/components/app-state";
-import { Icon, Shell } from "@/components/ui";
+import { Icon, LanguageSwitcher, Shell, TabebuiaTree } from "@/components/ui";
+import { INTENT_KEY } from "@/components/app-state";
 import { postJson } from "@/lib/client/api";
 
-type Stage = "phone" | "otp";
+type Stage = "intent" | "phone" | "otp";
+type Intent = "seeker" | "employer";
+
+const SPLASH_ITEMS = [
+  {
+    mark: "ದಾರಿ",
+    sub: "ಬೆಂಗಳೂರಿನಲ್ಲಿ ಕೌಶಲ್ಯದ ಕೆಲಸಕ್ಕೆ ನಿಮ್ಮ ದಾರಿ",
+    lang: "kn" as const,
+  },
+  {
+    mark: "दारी",
+    sub: "बेंगलुरु में कुशल काम के लिए आपका रास्ता",
+    lang: "hi" as const,
+  },
+  {
+    mark: "Daari",
+    sub: "Your path to skilled work in Bengaluru",
+    lang: "en" as const,
+  },
+];
 
 // useSearchParams needs a Suspense boundary, or the page cannot be built ahead of time.
 export function LoginScreen({ google }: { google: boolean }) {
@@ -38,11 +58,26 @@ export function LoginScreen({ google }: { google: boolean }) {
   );
 }
 
+/** Only paths inside this site, so a sign-in link can never send someone elsewhere. */
+function safeRedirect(value: string | null): string {
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/";
+}
+
 function LoginForm({ google }: { google: boolean }) {
   const { ready, t, effectiveLang } = useApp();
   const params = useSearchParams();
 
-  const [stage, setStage] = useState<Stage>("phone");
+  const initialIntentParam = params.get("intent");
+  const [intent, setIntent] = useState<Intent>(
+    initialIntentParam === "post" || initialIntentParam === "employer" ? "employer" : "seeker",
+  );
+  const [stage, setStage] = useState<Stage>(initialIntentParam ? "phone" : "intent");
+
+  const [splashPhase, setSplashPhase] = useState<"splash" | "settled">(initialIntentParam ? "settled" : "splash");
+  const [splashIndex, setSplashIndex] = useState(0);
+  const [langFading, setLangFading] = useState(false);
+  const [replayCount, setReplayCount] = useState(0);
+
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,9 +98,9 @@ function LoginForm({ google }: { google: boolean }) {
     if (err) setProblem(t("loginError"));
   }, [params, t]);
 
-  // Create a new RecaptchaVerifier whenever the captcha container remounts.
-  // The container remounts when captchaKey changes (after an error reset) or on
-  // initial mount. We do NOT call render() here — signInWithPhoneNumber does it.
+  // Create a new RecaptchaVerifier whenever the captcha container remounts. The container only
+  // exists after the intent screen, so the stage is a dependency too.
+  // We do NOT call render() here — signInWithPhoneNumber does it.
   useEffect(() => {
     if (!ready) return;
     if (!firebaseConfigured) return;
@@ -77,11 +112,15 @@ function LoginForm({ google }: { google: boolean }) {
       verifierRef.current = null;
     }
 
-    verifierRef.current = new RecaptchaVerifier(
-      firebaseAuth,
-      captchaContainerRef.current,
-      { size: "invisible" },
-    );
+    try {
+      verifierRef.current = new RecaptchaVerifier(
+        firebaseAuth,
+        captchaContainerRef.current,
+        { size: "invisible" },
+      );
+    } catch (err) {
+      console.error("[login] Failed to create RecaptchaVerifier", err);
+    }
 
     return () => {
       // Cleanup on unmount (navigation away from /login).
@@ -92,7 +131,49 @@ function LoginForm({ google }: { google: boolean }) {
     };
   // captchaKey in deps so the effect re-runs with a fresh div after resetVerifier().
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, captchaKey]);
+  }, [ready, captchaKey, stage]);
+
+  // Splash animation: Kannada → Hindi → English → settled.
+  useEffect(() => {
+    if (splashPhase === "settled") return;
+
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSplashPhase("settled");
+      return;
+    }
+
+    setSplashIndex(0);
+    const timer1 = setTimeout(() => setSplashIndex(1), 800);
+    const timer2 = setTimeout(() => setSplashIndex(2), 1600);
+    const timer3 = setTimeout(() => setSplashPhase("settled"), 2400);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replayCount]);
+
+  function skipSplash() {
+    setSplashPhase("settled");
+  }
+
+  function replaySplash() {
+    setSplashPhase("splash");
+    setReplayCount((c) => c + 1);
+  }
+
+  // Smooth cross-fade when the language changes.
+  const prevLangRef = useRef(effectiveLang);
+  useEffect(() => {
+    if (prevLangRef.current !== effectiveLang) {
+      setLangFading(true);
+      const timer = setTimeout(() => setLangFading(false), 240);
+      prevLangRef.current = effectiveLang;
+      return () => clearTimeout(timer);
+    }
+  }, [effectiveLang]);
 
   if (!ready) return null;
 
@@ -107,6 +188,18 @@ function LoginForm({ google }: { google: boolean }) {
     // Increment key → React replaces the <div> with a brand-new element →
     // the useEffect above re-runs and creates a clean RecaptchaVerifier.
     setCaptchaKey((k) => k + 1);
+  }
+
+  /**
+   * Keeps the choice from the first screen in this browser until the account has loaded, which
+   * becomes the role it opens as (see app-state).
+   */
+  function rememberIntent() {
+    try {
+      localStorage.setItem(INTENT_KEY, intent === "employer" ? "job_provider" : "job_seeker");
+    } catch {
+      // Home asks for the role again.
+    }
   }
 
   // ── Step 1: send OTP via Firebase ──────────────────────────────────────────
@@ -168,9 +261,10 @@ function LoginForm({ google }: { google: boolean }) {
       const credential = await confirmRef.current.confirm(code.trim());
       const idToken = await credential.user.getIdToken();
       await postJson("/api/auth/firebase", { idToken });
+      rememberIntent();
       // A full load, not a client-side move: the app then starts from this account's own data,
       // never from whatever the previous person on this phone left on screen.
-      window.location.replace("/");
+      window.location.replace(intent === "employer" ? "/jobs/post" : safeRedirect(params.get("redirect")));
     } catch (err: unknown) {
       const fbCode = (err as { code?: string }).code ?? "";
       if (fbCode === "auth/invalid-verification-code") {
@@ -200,131 +294,278 @@ function LoginForm({ google }: { google: boolean }) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  if (stage === "intent") {
+    return (
+      <div
+        className={`intent-viewport ${splashPhase === "splash" ? "splash-active" : "splash-settled"}`}
+        lang={effectiveLang}
+      >
+        {/* Animated Tabebuia Tree */}
+        <TabebuiaTree className="intent-tree" tall />
+
+        {/* Top bar with Language Switcher and Skip button */}
+        <div className="intent-topbar">
+          {splashPhase === "splash" && (
+            <button
+              type="button"
+              className="splash-skip-btn"
+              onClick={skipSplash}
+              aria-label="Skip intro animation"
+            >
+              Skip →
+            </button>
+          )}
+          <LanguageSwitcher />
+        </div>
+
+        {/* Main Content Area */}
+        <main
+          className={`intent-main lang-smooth-transition ${langFading ? "fading" : ""}`}
+        >
+          {splashPhase === "splash" ? (
+            <div className="splash-center-block">
+              <span className="splash-brand-mark" key={`mark-${splashIndex}`}>
+                {SPLASH_ITEMS[splashIndex].mark}
+              </span>
+              <p className="splash-sub-text" key={`sub-${splashIndex}`}>
+                {SPLASH_ITEMS[splashIndex].sub}
+              </p>
+            </div>
+          ) : (
+            <div className="intent-content-block" key={`settled-${replayCount}`}>
+              <header className="intent-brand-header">
+                <div
+                  className="login-brand-header"
+                  role="button"
+                  tabIndex={0}
+                  onClick={replaySplash}
+                  title="Replay intro animation"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") replaySplash();
+                  }}
+                >
+                  <span className="login-brand-mark">
+                    {effectiveLang === "kn" ? "ದಾರಿ" : effectiveLang === "hi" ? "दारी" : "Daari"}
+                  </span>
+                  <span className="login-brand-sub">Daari · ದಾರಿ · दारी</span>
+                </div>
+
+                <h1 className="login-hero-title">
+                  {t("loginHeroTitle")}
+                </h1>
+              </header>
+
+              {/* Two Direct Bangalore Action Buttons (Clean, Solid White, Tactile) */}
+              <div
+                className="intent-choices-grid"
+                role="group"
+                aria-label={t("intentQuestion")}
+              >
+                <button
+                  type="button"
+                  className="intent-choice-btn intent-choice-seeker"
+                  onClick={() => {
+                    setIntent("seeker");
+                    setStage("phone");
+                  }}
+                >
+                  <div className="intent-choice-icon" aria-hidden="true">
+                    <Icon name="briefcase" size={26} />
+                  </div>
+                  <div className="intent-choice-text">
+                    <span className="intent-choice-title">{t("intentSeekerTitle")}</span>
+                    <span className="intent-choice-sub">{t("intentSeekerSub")}</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="intent-choice-btn intent-choice-employer"
+                  onClick={() => {
+                    setIntent("employer");
+                    setStage("phone");
+                  }}
+                >
+                  <div className="intent-choice-icon" aria-hidden="true">
+                    <Icon name="tool" size={26} />
+                  </div>
+                  <div className="intent-choice-text">
+                    <span className="intent-choice-title">{t("intentEmployerTitle")}</span>
+                    <span className="intent-choice-sub">{t("intentEmployerSub")}</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <Shell>
-      <div className="page" lang={effectiveLang}>
-        <header className="page-head">
-          <h1>{t("loginTitle")}</h1>
-          <p>{t("loginSub")}</p>
-        </header>
+      <div className="login-layout" lang={effectiveLang}>
+        {/* Left / Hero brand panel with animated TabebuiaTree and app concept */}
+        <section className="login-brand-panel" aria-label="About Daari">
+          <TabebuiaTree className="login-tree" tall />
+          <div className="login-brand-content">
+            <div className="login-brand-header">
+              <span className="login-brand-mark">
+                {effectiveLang === "kn" ? "ದಾರಿ" : effectiveLang === "hi" ? "दारी" : "Daari"}
+              </span>
+              <span className="login-brand-sub">Daari · ದಾರಿ · दारी</span>
+            </div>
 
-        {!firebaseConfigured && (
-          <p className="error-note" role="alert">
-            <Icon name="warning" />
-            Firebase is not configured. Add <code>NEXT_PUBLIC_FIREBASE_API_KEY</code>,{" "}
-            <code>NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN</code>, and{" "}
-            <code>NEXT_PUBLIC_FIREBASE_PROJECT_ID</code> to your <code>.env</code> file,
-            then restart the dev server.
-          </p>
-        )}
+            <div className="login-hero-block">
+              <h1 className="login-hero-title">{t("loginHeroTitle")}</h1>
+            </div>
+          </div>
+        </section>
 
-        {/*
-          The key prop forces React to replace this div with a brand-new DOM node
-          whenever captchaKey changes, so reCAPTCHA never sees a "already rendered"
-          element on retry.
-        */}
-        <div key={captchaKey} ref={captchaContainerRef} />
-
-        {stage === "phone" && (
-          <form className="fields" onSubmit={sendOtp} noValidate>
-            <label className="field">
-              <span>{t("loginPhone")}</span>
-              <input
-                type="tel"
-                inputMode="numeric"
-                autoComplete="tel-national"
-                placeholder={t("loginPhonePlaceholder")}
-                value={phone}
-                disabled={busy || !firebaseConfigured}
-                onChange={(e) => setPhone(e.target.value)}
-                maxLength={15}
-                required
-              />
-            </label>
-
-            {notice && <p className="all-met"><Icon name="check" />{notice}</p>}
-            {problem && <p className="error-note" role="alert"><Icon name="warning" />{problem}</p>}
-
-            <div className="row-actions">
+        {/* Right / Login Form Card */}
+        <section className="login-form-panel">
+          <div className="login-card">
+            <div className="intent-nav-bar">
               <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={busy || !firebaseConfigured || phone.trim().replace(/\D/g, "").length < 10}
+                type="button"
+                className="link-button intent-back-btn"
+                onClick={() => setStage("intent")}
               >
-                {busy ? <span className="spinner" /> : null}
-                {busy ? t("loginSending") : t("loginSendOtp")}
+                ← {t("loginBack")}
+              </button>
+              <button
+                type="button"
+                className="link-button intent-switch-btn"
+                onClick={() => setIntent((prev) => (prev === "employer" ? "seeker" : "employer"))}
+              >
+                {intent === "employer" ? t("intentSwitchToSeeker") : t("intentSwitchToEmployer")}
               </button>
             </div>
-          </form>
-        )}
 
-        {stage === "otp" && (
-          <form className="fields" onSubmit={verifyOtp} noValidate>
-            <p className="honest-note">
-              {t("loginOtpSent")} +91 {phone.trim().replace(/\D/g, "").slice(-10)}
+            <header className="login-card-head">
+              <h2>{intent === "employer" ? t("loginTitleEmployer") : t("loginTitle")}</h2>
+              <p>{intent === "employer" ? t("loginSubEmployer") : t("loginSub")}</p>
+            </header>
+
+            {!firebaseConfigured && (
+              <p className="error-note" role="alert">
+                <Icon name="warning" />
+                Firebase is not configured. Add <code>NEXT_PUBLIC_FIREBASE_API_KEY</code>,{" "}
+                <code>NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN</code>, and{" "}
+                <code>NEXT_PUBLIC_FIREBASE_PROJECT_ID</code> to your <code>.env</code> file,
+                then restart the dev server.
+              </p>
+            )}
+
+            {/*
+              The key prop forces React to replace this div with a brand-new DOM node
+              whenever captchaKey changes, so reCAPTCHA never sees a "already rendered"
+              element on retry.
+            */}
+            <div key={captchaKey} ref={captchaContainerRef} />
+
+            {stage === "phone" && (
+              <form className="fields" onSubmit={sendOtp} noValidate>
+                <label className="field">
+                  <span>{t("loginPhone")}</span>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    placeholder={t("loginPhonePlaceholder")}
+                    value={phone}
+                    disabled={busy || !firebaseConfigured}
+                    onChange={(e) => setPhone(e.target.value)}
+                    maxLength={15}
+                    required
+                  />
+                </label>
+
+                {notice && <p className="all-met"><Icon name="check" />{notice}</p>}
+                {problem && <p className="error-note" role="alert"><Icon name="warning" />{problem}</p>}
+
+                <div className="row-actions">
+                  <button
+                    type="submit"
+                    className="btn btn-primary login-submit-btn"
+                    disabled={busy || !firebaseConfigured || phone.trim().replace(/\D/g, "").length < 10}
+                  >
+                    {busy ? <span className="spinner" /> : null}
+                    {busy ? t("loginSending") : t("loginSendOtp")}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {stage === "otp" && (
+              <form className="fields" onSubmit={verifyOtp} noValidate>
+                <p className="honest-note">
+                  {t("loginOtpSent")} +91 {phone.trim().replace(/\D/g, "").slice(-10)}
+                </p>
+
+                <label className="field">
+                  <span>{t("loginOtpLabel")}</span>
+                  <input
+                    ref={codeRef}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="\d{6}"
+                    maxLength={6}
+                    placeholder="••••••"
+                    value={code}
+                    disabled={busy}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    required
+                  />
+                </label>
+
+                {notice && <p className="all-met"><Icon name="check" />{notice}</p>}
+                {problem && <p className="error-note" role="alert"><Icon name="warning" />{problem}</p>}
+
+                <div className="row-actions login-otp-actions">
+                  <button
+                    type="submit"
+                    className="btn btn-primary login-submit-btn"
+                    disabled={busy || code.length !== 6}
+                  >
+                    {busy ? <span className="spinner" /> : null}
+                    {busy ? t("loginVerifying") : t("loginVerify")}
+                  </button>
+                  <button type="button" className="btn btn-quiet" disabled={busy} onClick={resend}>
+                    {t("loginResend")}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* ── Google OAuth, shown only once Google accepts this site's address (GOOGLE_SIGNIN=on) ── */}
+            {google ? (
+              <>
+                <div className="login-divider">
+                  <span>{t("loginOrGoogle")}</span>
+                </div>
+
+                <div className="row-actions">
+                  <a href="/api/auth/oauth/google" className="btn btn-quiet login-google" onClick={rememberIntent}>
+                    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+                      <path fill="#4285F4" d="M45.5 24.5c0-1.5-.1-3-.4-4.5H24v8.5h12.1c-.5 2.8-2.1 5.1-4.5 6.7v5.6h7.3c4.3-3.9 6.6-9.7 6.6-16.3z" />
+                      <path fill="#34A853" d="M24 46c6.5 0 11.9-2.1 15.9-5.8l-7.3-5.6c-2.1 1.4-4.7 2.2-7.6 2.2-5.9 0-10.9-4-12.7-9.3H3.7v5.8C7.7 41.5 15.3 46 24 46z" />
+                      <path fill="#FBBC05" d="M11.3 27.5A14.3 14.3 0 0 1 11.3 20.5v-5.8H3.7A23.5 23.5 0 0 0 .5 24c0 3.8.9 7.4 2.5 10.5l8.3-6.4z" />
+                      <path fill="#EA4335" d="M24 9.5c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 3 29.5.5 24 .5 15.3.5 7.7 5 3.7 12.2l8.3 6.4c1.8-5.3 6.8-9.1 12-9.1z" />
+                    </svg>
+                    {t("loginGoogle")}
+                  </a>
+                </div>
+              </>
+            ) : null}
+
+            <p className="honest-note login-privacy">
+              <Icon name="shield" size={16} />
+              {t("loginPrivacy")}
             </p>
-
-            <label className="field">
-              <span>{t("loginOtpLabel")}</span>
-              <input
-                ref={codeRef}
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="\d{6}"
-                maxLength={6}
-                placeholder="••••••"
-                value={code}
-                disabled={busy}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                required
-              />
-            </label>
-
-            {notice && <p className="all-met"><Icon name="check" />{notice}</p>}
-            {problem && <p className="error-note" role="alert"><Icon name="warning" />{problem}</p>}
-
-            <div className="row-actions">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={busy || code.length !== 6}
-              >
-                {busy ? <span className="spinner" /> : null}
-                {busy ? t("loginVerifying") : t("loginVerify")}
-              </button>
-              <button type="button" className="btn btn-quiet" disabled={busy} onClick={resend}>
-                {t("loginResend")}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* ── Google OAuth, shown only once Google accepts this site's address (GOOGLE_SIGNIN=on) ── */}
-        {google ? (
-          <>
-            <div className="login-divider">
-              <span>{t("loginOrGoogle")}</span>
-            </div>
-
-            <div className="row-actions">
-              <a href="/api/auth/oauth/google" className="btn btn-quiet login-google">
-                <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-                  <path fill="#4285F4" d="M45.5 24.5c0-1.5-.1-3-.4-4.5H24v8.5h12.1c-.5 2.8-2.1 5.1-4.5 6.7v5.6h7.3c4.3-3.9 6.6-9.7 6.6-16.3z" />
-                  <path fill="#34A853" d="M24 46c6.5 0 11.9-2.1 15.9-5.8l-7.3-5.6c-2.1 1.4-4.7 2.2-7.6 2.2-5.9 0-10.9-4-12.7-9.3H3.7v5.8C7.7 41.5 15.3 46 24 46z" />
-                  <path fill="#FBBC05" d="M11.3 27.5A14.3 14.3 0 0 1 11.3 20.5v-5.8H3.7A23.5 23.5 0 0 0 .5 24c0 3.8.9 7.4 2.5 10.5l8.3-6.4z" />
-                  <path fill="#EA4335" d="M24 9.5c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 3 29.5.5 24 .5 15.3.5 7.7 5 3.7 12.2l8.3 6.4c1.8-5.3 6.8-9.1 12-9.1z" />
-                </svg>
-                {t("loginGoogle")}
-              </a>
-            </div>
-          </>
-        ) : null}
-
-        <p className="honest-note login-privacy">
-          <Icon name="shield" size={16} />
-          {t("loginPrivacy")}
-        </p>
+          </div>
+        </section>
       </div>
     </Shell>
   );

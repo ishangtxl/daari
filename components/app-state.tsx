@@ -4,18 +4,39 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { translate, type StringKey } from "@/lib/i18n";
 import { chatMessageSchema, DOCUMENT_KINDS, statePatchSchema, type StatePatch } from "@/lib/state";
 import { emptyProfile, type Lang, type MatchedJob, type Profile, type ResumeData, type Roadmap } from "@/lib/types";
-import type { Application, ChatMessage, PlanStep } from "@/lib/state";
+import type { Application, ChatMessage, PlanStep, PostedListing, ProviderJobDraft, UserRole } from "@/lib/state";
 
-export type { Application, ApplicationStatus, ChatMessage, PlanStep } from "@/lib/state";
+export type { Application, ApplicationStatus, ChatMessage, PlanStep, PostedListing, ProviderJobDraft, UserRole } from "@/lib/state";
 
 // ── Auth user type (mirrors SessionPayload sub-fields returned by /api/auth/session) ──
 export type AuthUser = { id: string; name: string | null; provider: "phone" | "google" };
 
+export function emptyDraft(): ProviderJobDraft {
+  return {
+    businessName: "",
+    roleCategory: "",
+    customRoleName: "",
+    locality: "",
+    landmark: "",
+    salaryMin: 16000,
+    salaryMax: 22000,
+    vacancies: 1,
+    requirements: [],
+    customNotes: "",
+    whatsappContact: "",
+    proofType: "none",
+    proofValue: "",
+  };
+}
+
 type Stored = {
   lang: Lang | null;
+  /** Permanent once chosen: a job seeker cannot become a provider and vice versa. */
+  role: UserRole | null;
   user: AuthUser | null;
   profile: Profile;
   messages: ChatMessage[];
+  providerMessages: ChatMessage[];
   /** The latest plan, also shown on Home. */
   roadmap: Roadmap | null;
   jobs: MatchedJob[] | null;
@@ -26,6 +47,8 @@ type Stored = {
   resume: ResumeData | null;
   resumeReview: string[];
   resumeRemoved: string[];
+  providerDraft: ProviderJobDraft;
+  postedListings: PostedListing[];
 };
 
 /** The parts saved to the account. Messages are saved separately, one row each. */
@@ -35,6 +58,8 @@ type Synced = (typeof SYNCED)[number];
 // Only the language stays in the browser, for the screens before sign-in. Everything else belongs
 // to the account on the server, so a shared phone never shows one person's details to another.
 const LANG_KEY = "daari.lang";
+/** The role picked on the sign-in screen, held until the account loads and can take it as its role. */
+export const INTENT_KEY = "daari.intent";
 // Before accounts, everything was kept here. It is moved into the account once, then removed.
 const LEGACY_KEY = "daari.v1";
 const SAVE_DELAY_MS = 700;
@@ -42,9 +67,11 @@ const RETRY_DELAY_MS = 5000;
 
 const initial = (lang: Lang | null = null): Stored => ({
   lang,
+  role: null,
   user: null,
   profile: emptyProfile(),
   messages: [],
+  providerMessages: [],
   roadmap: null,
   jobs: null,
   roles: [],
@@ -54,6 +81,8 @@ const initial = (lang: Lang | null = null): Stored => ({
   resume: null,
   resumeReview: [],
   resumeRemoved: [],
+  providerDraft: emptyDraft(),
+  postedListings: [],
 });
 
 type AppState = Stored & {
@@ -141,7 +170,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     for (const key of SYNCED) if (current[key] !== savedRef.current[key]) patch[key] = current[key];
     const fresh = current.messages.filter((message) => !savedMessagesRef.current.has(message.id));
     if (!Object.keys(patch).length && !fresh.length) return;
-
     const run = async () => {
       try {
         if (Object.keys(patch).length) {
@@ -209,6 +237,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           for (const kind of DOCUMENT_KINDS) {
             if (loaded.documents[kind] !== undefined) Object.assign(documents, { [kind]: loaded.documents[kind] });
           }
+          if (documents.providerDraft) documents.providerDraft = { ...emptyDraft(), ...documents.providerDraft, proofType: "none", proofValue: "" };
           next = { ...next, ...documents, lang: (documents.lang as Lang | null | undefined) ?? lang, messages: loaded.messages, applications: loaded.applications };
         }
         if (!imported) {
@@ -220,6 +249,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           savedMessagesRef.current = new Set(next.messages.map((message) => message.id));
         }
       }
+      // What the person picked on the sign-in screen is what they get, so one account can be
+      // opened as a job seeker or as an employer. Each side keeps its own data.
+      const intent = readLocal(INTENT_KEY);
+      if (user && loaded && (intent === "job_seeker" || intent === "job_provider")) {
+        next = { ...next, role: intent };
+      }
+      if (user) writeLocal(INTENT_KEY, null);
       canSaveRef.current = Boolean(user && loaded);
       if (user && !loaded) {
         setLoadFailed(true);
