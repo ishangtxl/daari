@@ -82,7 +82,7 @@ export default function Learn() {
               </section>
             )}
             {!plan && !busy && <button type="button" className="btn btn-primary" onClick={makePlan}>{t("makePlan")}</button>}
-            {busy && <Loading text={t("planLoading")} stops={3} />}
+            {busy && <Loading text={t("planLoading")} />}
             {problem && <ErrorNote text={problem} onRetry={makePlan} />}
             {plan && <PlanSteps steps={plan} idPrefix="learn" />}
           </>

@@ -204,8 +204,8 @@ export default function Talk() {
               ),
             )}
             {streaming !== null && <div className="bubble bubble-assistant"><p>{streaming}</p></div>}
-            {busy && streaming === null && <Loading text={t("thinking")} stops={3} />}
-            {roadBusy && <Loading text={t("roadMaking")} stops={5} />}
+            {busy && streaming === null && <Loading text={t("thinking")} />}
+            {roadBusy && <Loading text={t("roadMaking")} />}
             {problem && lastText && <ErrorNote text={problem} onRetry={() => send(lastText.text, lastText.spoken, true)} />}
             {roadProblem && <ErrorNote text={t("roadFailed")} onRetry={() => makeRoad(profile, messages)} />}
             {roadStale && !busy && !roadBusy && !roadProblem && (

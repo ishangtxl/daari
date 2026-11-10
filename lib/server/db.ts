@@ -1,5 +1,6 @@
 /**
- * The SQLite database that holds each account's conversation, plan, jobs, applications and resume.
+ * The SQLite database that holds each account's conversation, plan, jobs, applications and resume,
+ * and the jobs employers post on Daari with the applications sent to them.
  * One file on the server, opened once per process. Every query is scoped by the account id taken
  * from the signed session, never by anything the browser sends.
  */
@@ -66,6 +67,42 @@ export const MIGRATIONS: string[] = [
   DROP TABLE IF EXISTS listing_applications;
   DROP TABLE IF EXISTS job_listings;
   DELETE FROM documents WHERE kind IN ('role', 'providerDraft', 'providerMessages', 'postedListings');
+  `,
+  `
+  -- Jobs employers post on Daari. The body holds the form as typed and the translated listing.
+  CREATE TABLE postings (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    body TEXT NOT NULL CHECK (json_valid(body)),
+    closed INTEGER NOT NULL DEFAULT 0 CHECK (closed IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT ${NOW},
+    updated_at TEXT NOT NULL DEFAULT ${NOW},
+    expires_at TEXT NOT NULL
+  ) STRICT;
+  CREATE INDEX postings_by_owner ON postings (owner_id);
+  CREATE INDEX postings_open ON postings (closed, expires_at);
+
+  -- One row per person who applied to a posting, with the card they agreed to send.
+  CREATE TABLE posting_applications (
+    id TEXT PRIMARY KEY,
+    posting_id TEXT NOT NULL REFERENCES postings (id) ON DELETE CASCADE,
+    applicant_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    card TEXT NOT NULL CHECK (json_valid(card)),
+    status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'shortlisted', 'rejected', 'hired')),
+    seen_at TEXT,
+    created_at TEXT NOT NULL DEFAULT ${NOW},
+    updated_at TEXT NOT NULL DEFAULT ${NOW},
+    UNIQUE (posting_id, applicant_id)
+  ) STRICT;
+  CREATE INDEX posting_applications_by_applicant ON posting_applications (applicant_id);
+
+  CREATE TABLE posting_reports (
+    posting_id TEXT NOT NULL REFERENCES postings (id) ON DELETE CASCADE,
+    reporter_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    reason TEXT NOT NULL CHECK (reason IN ('asks_money', 'fake', 'rude', 'other')),
+    created_at TEXT NOT NULL DEFAULT ${NOW},
+    PRIMARY KEY (posting_id, reporter_id)
+  ) STRICT, WITHOUT ROWID;
   `,
 ];
 

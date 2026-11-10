@@ -7,6 +7,9 @@ import { speak, stopSpeaking, unlockAudio, usePlayback } from "@/lib/client/audi
 import { parsePay } from "@/lib/pay";
 import { LANGS, type Lang, type StopStatus } from "@/lib/types";
 import { useApp } from "./app-state";
+import { AutoOnRoad } from "./art";
+
+export { TabebuiaTree } from "./art";
 
 const PATHS: Record<string, ReactNode> = {
   home: <path d="M3 11.5L12 4l9 7.5M5.5 9.5V20h13V9.5M10 20v-6h4v6" />,
@@ -33,6 +36,10 @@ const PATHS: Record<string, ReactNode> = {
   filter: <path d="M4 6h16M7 12h10M10 18h4" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   compass: <><circle cx="12" cy="12" r="9" /><path d="M15.5 8.5l-2 5-5 2 2-5z" /></>,
+  plus: <path d="M12 5v14M5 12h14" />,
+  share: <><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="18" cy="18" r="2.5" /><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6" /></>,
+  flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
+  shop: <path d="M4 10v10h16V10M3 10l2-6h14l2 6zM3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3M10 20v-4h4v4" />,
 };
 
 export function Icon({ name, size = 24 }: { name: keyof typeof PATHS | string; size?: number }) {
@@ -51,6 +58,19 @@ const NAV = [
   { href: "/check", icon: "shield", label: "navCheck" },
   { href: "/me", icon: "person", label: "navMe" },
 ] as const;
+
+// The employer pages have their own few tabs: the seeker's tabs mean nothing to someone hiring.
+const EMPLOYER_NAV = [
+  { href: "/employer", icon: "shop", label: "navPostings" },
+  { href: "/employer/new", icon: "plus", label: "navNewPosting" },
+  { href: "/", icon: "home", label: "navFindWork" },
+] as const;
+
+function isActive(href: string, pathname: string) {
+  if (href === "/") return pathname === "/";
+  if (href === "/employer") return pathname === "/employer" || (pathname.startsWith("/employer/") && !pathname.startsWith("/employer/new"));
+  return pathname.startsWith(href);
+}
 
 export const LANG_LABEL: Record<Lang, string> = { en: "English", hi: "हिन्दी", kn: "ಕನ್ನಡ" };
 
@@ -107,24 +127,14 @@ export function LanguageSwitcher() {
   );
 }
 
-function AuthButton() {
-  const { t, user, signOut } = useApp();
+/** Signing out lives with the account, not in every screen's corner where it is easy to tap by mistake. */
+export function SignOutButton() {
+  const { t, signOut } = useApp();
   const router = useRouter();
-
-  if (!user) {
-    return (
-      <Link href="/login" className="btn btn-quiet auth-btn" aria-label={t("navLogin")}>
-        <Icon name="person" size={20} />
-        <span>{t("navLogin")}</span>
-      </Link>
-    );
-  }
-
   return (
     <button
       type="button"
-      className="btn btn-quiet auth-btn"
-      aria-label={t("signOut")}
+      className="btn btn-quiet"
       onClick={async () => {
         await signOut();
         router.push("/login");
@@ -142,13 +152,14 @@ export function Shell({ children, fill = false }: { children: ReactNode; fill?: 
   const pathname = usePathname();
   // Before sign-in every tab leads back to the sign-in page, so it shows none of them.
   const signingIn = pathname === "/login";
+  const hiring = pathname.startsWith("/employer");
   return (
     <div className={["shell", signingIn && "shell-bare", fill && "shell-fill"].filter(Boolean).join(" ")}>
       {!signingIn && (
-        <nav className="nav" aria-label="Daari">
-          <Link href="/" className="nav-brand">Daari</Link>
-          {NAV.map((item) => {
-            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        <nav className={hiring ? "nav nav-few" : "nav"} aria-label="Daari">
+          <Link href={hiring ? "/employer" : "/"} className="nav-brand" aria-label="Daari">ದಾರಿ</Link>
+          {(hiring ? EMPLOYER_NAV : NAV).map((item) => {
+            const active = isActive(item.href, pathname);
             return (
               <Link key={item.href} href={item.href} className="nav-item" aria-current={active ? "page" : undefined}>
                 <Icon name={item.icon} />
@@ -159,7 +170,10 @@ export function Shell({ children, fill = false }: { children: ReactNode; fill?: 
         </nav>
       )}
       <main className="main">
-        <div className="topbar"><LanguageSwitcher />{!signingIn && <AuthButton />}</div>
+        <div className="topbar">
+          {signingIn ? <span className="topbar-brand">ದಾರಿ</span> : <Link href={hiring ? "/employer" : "/"} className="topbar-brand" aria-label="Daari">ದಾರಿ</Link>}
+          <LanguageSwitcher />
+        </div>
         {children}
       </main>
     </div>
@@ -215,14 +229,10 @@ export function RouteLine({ stops, total }: { stops: { status: StopStatus }[]; t
   );
 }
 
-export function Loading({ text, stops = 5 }: { text: string; stops?: number }) {
+export function Loading({ text }: { text: string }) {
   return (
     <div className="loading" role="status">
-      <div className="loading-route" aria-hidden="true">
-        {Array.from({ length: stops }, (_, index) => (
-          <span key={index} style={{ animationDelay: `${index * 120}ms` }} />
-        ))}
-      </div>
+      <AutoOnRoad />
       <p>{text}</p>
     </div>
   );
@@ -266,82 +276,5 @@ export function CopyButton({ text }: { text: string }) {
       {copied ? <Icon name="check" size={20} /> : null}
       {copied ? t("copied") : t("copy")}
     </button>
-  );
-}
-
-// A small seeded generator keeps the art identical on server and client.
-function seeded(seed: number) {
-  let value = seed;
-  return () => {
-    value = (value * 1664525 + 1013904223) % 4294967296;
-    return value / 4294967296;
-  };
-}
-
-/**
- * A tabebuia tree drawn in small cells, the pink trees that line Bangalore's roads. A few petals
- * drift down. This is the one piece of art, and it appears only in headers and empty states.
- */
-export function TabebuiaTree({ className, tall = false }: { className?: string; tall?: boolean }) {
-  const random = seeded(11);
-  const cell = 9;
-  const columns = 40;
-  // Tall trees run off the bottom of a header, and short ones stand on a strip of grass.
-  const rows = tall ? 120 : 38;
-  const blobs = [
-    { x: 21, y: 13, r: 11 },
-    { x: 11, y: 17, r: 8 },
-    { x: 31, y: 17, r: 8 },
-    { x: 16, y: 8, r: 7 },
-    { x: 27, y: 8, r: 7 },
-  ];
-  const cells: { x: number; y: number; fill: string }[] = [];
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < columns; x++) {
-      const distance = Math.min(...blobs.map((blob) => Math.hypot(x - blob.x, (y - blob.y) * 1.1) / blob.r));
-      if (distance < 1 && random() < 1.08 - distance * 0.55) {
-        const roll = random();
-        cells.push({ x, y, fill: roll < 0.08 ? "var(--auto)" : roll < 0.3 ? "#FBD3E0" : "var(--pink)" });
-      }
-    }
-  }
-  const trunk: { x: number; y: number }[] = [];
-  for (let y = 21; y < rows; y++) {
-    for (let x = 20; x < 23; x++) trunk.push({ x, y });
-  }
-  for (let i = 0; i < 6; i++) {
-    trunk.push({ x: 20 - i, y: 23 - i }, { x: 22 + i, y: 23 - i });
-  }
-  const grass = tall ? [] : Array.from({ length: columns - 8 }, (_, index) => ({ x: index + 4, y: rows - 1 }));
-  const petals = Array.from({ length: 9 }, (_, index) => ({
-    x: Math.floor(random() * columns),
-    y: 22 + Math.floor(random() * 8),
-    delay: index * 1.1,
-    duration: 7 + random() * 5,
-  }));
-  return (
-    <svg className={`tree ${className ?? ""}`} viewBox={`0 0 ${columns * cell} ${rows * cell}`} aria-hidden="true">
-      {trunk.map((part, index) => (
-        <rect key={index} x={part.x * cell} y={part.y * cell} width={cell - 1} height={cell - 1} fill="#0D1E63" />
-      ))}
-      {grass.map((part, index) => (
-        <rect key={index} x={part.x * cell} y={part.y * cell} width={cell - 1} height={cell - 1} fill="#3E9E5B" />
-      ))}
-      {cells.map((part, index) => (
-        <rect key={index} x={part.x * cell} y={part.y * cell} width={cell - 1} height={cell - 1} fill={part.fill} />
-      ))}
-      {petals.map((petal, index) => (
-        <rect
-          key={index}
-          className="petal"
-          x={petal.x * cell}
-          y={petal.y * cell}
-          width={cell - 2}
-          height={cell - 2}
-          fill="var(--pink)"
-          style={{ animationDelay: `${petal.delay}s`, animationDuration: `${petal.duration}s` }}
-        />
-      ))}
-    </svg>
   );
 }

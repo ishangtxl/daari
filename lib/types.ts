@@ -51,6 +51,10 @@ export type Job = {
   requirements: Requirement[];
   signals: { asks_payment: number; asks_sensitive: number; unrealistic: number };
   description: string;
+  /** Posted on Daari by the employer, so people apply here instead of on another site. */
+  direct?: boolean;
+  /** Working hours and days off, for jobs posted on Daari. */
+  timings?: Localized | null;
 };
 
 export type StopStatus = "met" | "gap" | "unsure";

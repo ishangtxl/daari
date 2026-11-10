@@ -2,21 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "@/components/app-state";
 import { RoadMap } from "@/components/road-map";
+import { ChooseLanguage } from "@/components/welcome";
 import { ErrorNote, Icon, Loading, Shell, TabebuiaTree } from "@/components/ui";
 import { postJson } from "@/lib/client/api";
 import { unlockAudio } from "@/lib/client/audio";
 import { roadText, transcriptOf } from "@/lib/client/road";
 import type { StringKey } from "@/lib/i18n";
-import type { Goal, Lang, Roadmap } from "@/lib/types";
-
-const LANGUAGE_CHOICES: { lang: Lang; label: string; hint: string }[] = [
-  { lang: "kn", label: "ಕನ್ನಡ", hint: "Kannada" },
-  { lang: "hi", label: "हिन्दी", hint: "Hindi" },
-  { lang: "en", label: "English", hint: "English" },
-];
+import type { PostingSummary } from "@/lib/postings";
+import type { Goal, Roadmap } from "@/lib/types";
 
 const GOAL_ROWS: { goal: Goal; icon: string; label: StringKey; hint: StringKey }[] = [
   { goal: "job", icon: "briefcase", label: "goalJob", hint: "goalJobHint" },
@@ -25,23 +21,28 @@ const GOAL_ROWS: { goal: Goal; icon: string; label: StringKey; hint: StringKey }
   { goal: "unsure", icon: "compass", label: "goalUnsure", hint: "goalUnsureHint" },
 ];
 
-function ChooseLanguage() {
-  const { update } = useApp();
+/** Someone hiring finds their postings here. Everyone else gets one quiet line about posting a job. */
+function HiringLink() {
+  const { t } = useApp();
+  const [mine, setMine] = useState<PostingSummary[] | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/employer/postings", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : { postings: [] }))
+      .then((result: { postings: PostingSummary[] }) => { if (active) setMine(result.postings); })
+      .catch(() => { if (active) setMine([]); });
+    return () => { active = false; };
+  }, []);
+  if (mine === null) return null;
+  const fresh = mine.reduce((sum, posting) => sum + posting.fresh, 0);
   return (
-    <main className="welcome">
-      <TabebuiaTree className="welcome-tree" tall />
-      <div className="welcome-body">
-        <h1 className="brand-mark">ದಾರಿ</h1>
-        <p className="welcome-line">Daari · दारी</p>
-        <div className="language-list">
-          {LANGUAGE_CHOICES.map((choice) => (
-            <button key={choice.lang} type="button" lang={choice.lang} className="language-choice" onClick={() => update({ lang: choice.lang })}>
-              {choice.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </main>
+    <Link href={mine.length ? "/employer" : "/employer/new"} className="home-link">
+      <Icon name="shop" size={28} />
+      <span>
+        {mine.length ? t("homePostings") : t("homeHiring")}
+        {fresh > 0 && <span className="count-badge">{t("applicantsNew", { count: fresh })}</span>}
+      </span>
+    </Link>
   );
 }
 
@@ -136,6 +137,7 @@ export default function Home() {
           <Icon name="shield" size={28} />
           <span>{t("homeCheck")}</span>
         </Link>
+        <HiringLink />
       </section>
     </Shell>
   );

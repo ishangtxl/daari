@@ -6,6 +6,8 @@ Bangalore has plenty of skilled work, and plenty of people who can do it: ITI an
 
 Daari is a career counsellor you talk to in Kannada, Hindi or English. It asks about the work you have done, informal work included, and gives you a short plan. It finds jobs that fit and shows which requirements you already meet. It teaches the ones you don't, writes a resume from what you said, and checks job messages for the signs of a scam.
 
+Small employers can post on Daari too. A shop owner describes the job by talking or typing in their own language. Daari writes the posting in all three languages and refuses any posting that charges applicants. People whose skills fit then apply inside Daari, and hear back there.
+
 **Live:** https://145-223-23-79.sslip.io
 
 <table>
@@ -36,7 +38,7 @@ Each number is its own account. Other people may be using them too, so "Delete m
 
 ### Talk, then a plan
 
-The first screen asks one question: where do you want to start? You can look for a job, learn a skill, make a resume, or say you're not sure yet. Tap the mic and speak, or type. Speech is transcribed in whatever mix of languages you actually use, and every reply can be read aloud.
+You start by picking Kannada, Hindi or English, each written in its own script, so nobody has to read English to sign in. The home screen then asks one question: where do you want to start? You can look for a job, learn a skill, make a resume, or say you're not sure yet. Tap the mic and speak, or type. Speech is transcribed in whatever mix of languages you actually use, and every reply can be read aloud.
 
 The counsellor asks one question at a time and counts informal work as work. Three years fixing phones at an uncle's shop is experience, and it says so. Once it has enough, a fast yes/no check decides the conversation is ready, and Daari hands over a plan. The plan says what Daari understood about you, then gives two to four steps, each with a button that goes to the right screen, and ends at the work you're aiming for. If the summary gets something wrong, tell Daari, then tap **Make a new plan** on Home.
 
@@ -90,14 +92,38 @@ The resume is written in English for employers, from what you told Daari or from
 
 Paste or read out a job message from WhatsApp, Telegram or SMS. Daari names the specific warning signs, such as "asks you to pay money" or "moves you to WhatsApp", explains them in a sentence or two, and says what to do next.
 
+### Hiring on Daari
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/hire-describe.jpg" width="250" alt="An employer describing a job in their own words"></td>
+    <td><img src="docs/screenshots/hire-apply.jpg" width="250" alt="A job seeker applying in Kannada, answering each requirement"></td>
+    <td><img src="docs/screenshots/hire-applicant.jpg" width="250" alt="The employer's view of one applicant"></td>
+  </tr>
+  <tr>
+    <td align="center">The employer describes the job</td>
+    <td align="center">A job seeker applies, in their language</td>
+    <td align="center">The employer sees who applied, and calls</td>
+  </tr>
+</table>
+
+Most of the jobs these people end up doing are in small shops and workshops that never post online. The sign-in page asks "Hiring for your shop or business?", and the same phone sign-in takes the employer to their own pages: their postings, a new posting, and a way back to finding work.
+
+- **Posting.** The employer says what the job is, where, the pay, the timings and what the person must know. A language model turns that into a posting for them to check and correct: a title, what the work involves, pay and timings, and up to six requirements, each written so a job seeker can answer yes or no. Jev picks the kind of work, which decides who sees it. If none of the listed kinds fits, the employer types their own and Jev matches it to the nearest one. On publishing, the posting is translated into English, Hindi and Kannada, and the employer's own wording is kept as typed.
+- **Screening.** Jev checks the employer's description, and again the final posting, for three things that stop it going up: asking applicants to pay (a fee, a deposit, a uniform), asking for an OTP, bank details, Aadhaar or PAN before an interview, and turning people away by caste, religion or community. If the description asked for money, the employer has to describe the job again, so a draft that quietly dropped the fee cannot be posted. Pay that looks too good for the work is a caution, not a block. On test postings, clean ones scored at most 0.37 on every check and the bad ones 0.93 to 0.97, against a cut-off of 0.6.
+- **Finding it.** Open postings join the catalog in matching, so they get the same fit check and the same route of requirements as any other job. Among jobs that fit equally well, one posted on Daari comes first, marked with a yellow **Apply on Daari** tag. Saved matches refresh whenever an employer posts, changes or closes a job. An employer can share a posting on WhatsApp. Someone who opens the link and is not signed in comes back to the job after signing in.
+- **Applying.** The person answers each requirement yes or no themselves, starting from what they have already told Daari (Daari never guesses a "no" for them), and adds a phone number and a note if they want. Before sending, they see exactly what the employer will get: name, phone, area, education, work done, skills and languages. That copy goes to that one employer only. They can take it back at any time, and then the employer no longer sees any of it.
+- **Hearing back.** The employer sees each applicant with their answers, can call them or send a WhatsApp message (written in the applicant's language), and can mark them shortlisted, not a fit or hired. The applicant sees, in words, where they stand: not looked at yet, seen, interested ("keep your phone close"), someone else chosen, or picked. Most job portals never tell people this.
+- **Keeping it clean.** A posting lasts 30 days, then the employer renews it if they are still hiring. Closing takes it out of every list at once. One account can have 10 open postings, and the same job cannot be open twice. Job seekers can report a posting, and reports from three different people take it down.
+
 ## How it fits together
 
 | Job | Tool |
 |---|---|
 | Speech to text, text to speech | Sarvam: `saaras:v3` (handles mixed Kannada, Hindi and English) and `bulbul:v3` |
 | Conversation, plans, writing, translation | GPT-6 Luna through ZenMux, with GPT-6.1 Terra for resumes. IBM Bob's `premium` model is used instead when `IBM_BOB_API_KEY` is set. |
-| Fast yes/no decisions: job fit, each requirement, scam signals, resume claims, when to make a plan, whether a video fits | Jev (TypeSafe), around 250ms per decision |
-| Job listings | JSearch, prepared ahead of time into `data/jobs.json` (212 Bangalore listings) |
+| Fast yes/no decisions: job fit, each requirement, scam signals, whether a posting may go up and its kind of work, resume claims, when to make a plan, whether a video fits | Jev (TypeSafe), around 250ms per decision |
+| Job listings | JSearch, prepared ahead of time into `data/jobs.json` (212 Bangalore listings), plus the jobs employers post on Daari |
 | Local businesses | Google Places, or a Google Maps search when no key is set |
 | Road distances | Google Routes API |
 | Learning videos | YouTube Data API |
@@ -115,10 +141,12 @@ Two rules shape most of the code:
 ## Project layout
 
 ```
-app/                 Pages (Home, Talk, Jobs, Learn, Check, Resume, Sign in) and API routes under app/api
+app/                 Pages (Home, Talk, Jobs, Learn, Check, Resume, Sign in, and the employer pages
+                     under /employer) and API routes under app/api
 components/          Shared UI: the account state, the chat composer, the plan, the route line
 lib/
-  i18n.ts            Every string on screen, in English, Hindi and Kannada
+  i18n.ts            Every string on screen, in English, Hindi and Kannada (hiring's are in i18n-hiring.ts)
+  postings.ts        Postings and applications: the form, the applicant's card, screening thresholds
   state.ts           The schemas for saved account data, shared by browser and server
   types.ts           Profile, job and plan types
   rank.ts, pay.ts    Job ranking and pay parsing
@@ -136,7 +164,8 @@ tests/               Unit tests (vitest)
 Accounts are kept in one SQLite file, through Node's built-in `node:sqlite`, so there is no database server or native module to install. `lib/server/db.ts` opens it and applies the migrations, `lib/server/store.ts` holds every query, and `lib/state.ts` has the schemas both the browser and the server check against.
 
 - **One account's data only.** The account id comes from the signed session cookie (`phone:+91…` or `google:…`), and every query is scoped by it. Nothing the browser sends can choose the account.
-- **Tables.** `users`, then `documents` (one JSON document per part of the account, such as `profile` or `plan`), `messages` (one row per message, in order) and `applications`. They are `STRICT`, check their JSON and allowed values, and are deleted with their account through foreign keys.
+- **Tables.** `users`, then `documents` (one JSON document per part of the account, such as `profile` or `plan`), `messages` (one row per message, in order) and `applications`. Hiring adds `postings`, `posting_applications` (one per person per posting, holding the card they agreed to send) and `posting_reports`. They are `STRICT`, check their JSON and allowed values, and are deleted with their account through foreign keys. `lib/server/postings.ts` holds the hiring queries.
+- **Postings and applications.** Only the employer who posted a job can see who applied or change it. Only the person who applied can see or take back their application. Employers see an application by an id of its own, never the applicant's account id. Deleting an employer's account removes their postings and every application to them. Deleting a job seeker's account removes their applications from every employer's view.
 - **Saving.** The browser sends only what changed, a moment after it changes, with retries, and sends any pending save when the page is closed. Each save is one transaction. A message sent twice is stored once, and each account keeps its newest 1,000 messages. If two phones change the same part at once, the later save wins.
 - **Migrations.** Each schema change is a new entry at the end of `MIGRATIONS`, applied in order on start and tracked in `PRAGMA user_version`. Never edit one that has shipped. The app refuses to start on a database written by newer code.
 - **Deleting.** "Delete my information" removes the account and everything it owns.
@@ -193,7 +222,7 @@ A pay filter keeps a job only when the listing's stated minimum monthly pay is a
 
 ## Tests
 
-`pnpm test` runs the unit tests: job matching and ranking, profile merging, road distances, the YouTube picker, and the account store. The store tests use a real SQLite file. They check that two accounts never see each other's data, that a resent message is saved once, and that deleting an account removes everything it owns and nothing else.
+`pnpm test` runs the unit tests: job matching and ranking, profile merging, road distances, the YouTube picker, the account store, and postings. The store tests use a real SQLite file. They check that two accounts never see each other's data, that a resent message is saved once, and that deleting an account removes everything it owns and nothing else. The posting tests check that only the employer sees who applied, that a closed or expired posting takes no applications, that a withdrawn application disappears from the employer's view, and that three reports take a posting down.
 
 [TESTING.md](TESTING.md) is the manual test plan, written as one person's path through the app.
 
@@ -209,4 +238,6 @@ The app runs as the `daari` service behind Caddy, from `~/daari/current`. Its ke
 - A plan is written in the language you were using when it was made. Switching language changes the screens around it but not the plan's own text, until you make the plan again.
 - The spending limit counts per server process, so it resets on each deploy. It is a safety net, not an account balance.
 - If two phones signed in to one account change the same thing at the same moment, the later save wins.
+- A posting taken down by reports stays down. There is no review screen yet to put back one that was reported unfairly.
+- Applicants wait for the employer to call. The employer's own number is not shown to them.
 - `spikes/` holds the throwaway scripts behind the early API and model choices. They are not part of the app.

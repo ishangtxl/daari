@@ -1,3 +1,4 @@
+import { hiringEn, hiringHi, hiringKn } from "./i18n-hiring";
 import type { Lang } from "./types";
 
 const en = {
@@ -68,7 +69,7 @@ const en = {
   jobsTitle: "Jobs for you",
   tabOpen: "Open jobs",
   tabNearby: "Places to ask",
-  tabApplied: "My applications",
+  tabApplied: "Applied",
   noProfileTitle: "First, tell me about your work",
   noProfileBody: "I need to know what you can do before I can find jobs.",
   startTalking: "Start talking",
@@ -162,6 +163,11 @@ const en = {
   howFar: "How far?",
   monthlyPay: "Pay per month",
   showJobsButton: "Show {count} jobs",
+  jobsNear: "Jobs near {area}",
+  filtersOn: "{count} filters on",
+  changeSearch: "Change",
+  showJobsAgain: "Search this area",
+  iHaveThis: "Yes, I have this",
   showJobsLoading: "Show jobs",
   removeFilter: "Remove filter: {name}",
   noPayHidden: "{count} jobs are hidden because they do not show the pay.",
@@ -260,6 +266,7 @@ const en = {
   navLogin: "Sign in",
   signOut: "Sign out",
   signedInAs: "Signed in as {id}",
+  ...hiringEn,
 };
 
 export type StringKey = keyof typeof en;
@@ -426,6 +433,11 @@ const hi: Record<StringKey, string> = {
   howFar: "कितनी दूर?",
   monthlyPay: "महीने का वेतन",
   showJobsButton: "{count} नौकरियाँ दिखाएँ",
+  jobsNear: "{area} के पास नौकरियाँ",
+  filtersOn: "{count} फ़िल्टर लगे हैं",
+  changeSearch: "बदलें",
+  showJobsAgain: "इस इलाके में ढूँढें",
+  iHaveThis: "हाँ, यह मेरे पास है",
   showJobsLoading: "नौकरियाँ दिखाएँ",
   removeFilter: "फ़िल्टर हटाएँ: {name}",
   noPayHidden: "{count} नौकरियाँ छिपी हैं क्योंकि उनमें वेतन नहीं लिखा है।",
@@ -523,6 +535,7 @@ const hi: Record<StringKey, string> = {
   navLogin: "साइन इन",
   signOut: "साइन आउट",
   signedInAs: "{id} के रूप में लॉग इन",
+  ...hiringHi,
 };
 
 const kn: Record<StringKey, string> = {
@@ -687,6 +700,11 @@ const kn: Record<StringKey, string> = {
   howFar: "ಎಷ್ಟು ದೂರ?",
   monthlyPay: "ತಿಂಗಳ ಸಂಬಳ",
   showJobsButton: "{count} ಕೆಲಸಗಳನ್ನು ತೋರಿಸಿ",
+  jobsNear: "{area} ಹತ್ತಿರದ ಕೆಲಸಗಳು",
+  filtersOn: "{count} ಫಿಲ್ಟರ್ ಹಾಕಲಾಗಿದೆ",
+  changeSearch: "ಬದಲಿಸಿ",
+  showJobsAgain: "ಈ ಪ್ರದೇಶದಲ್ಲಿ ಹುಡುಕಿ",
+  iHaveThis: "ಹೌದು, ಇದು ನನ್ನಲ್ಲಿದೆ",
   showJobsLoading: "ಕೆಲಸಗಳನ್ನು ತೋರಿಸಿ",
   removeFilter: "ಫಿಲ್ಟರ್ ತೆಗೆಯಿರಿ: {name}",
   noPayHidden: "{count} ಕೆಲಸಗಳಲ್ಲಿ ಸಂಬಳ ಬರೆದಿಲ್ಲ, ಆದ್ದರಿಂದ ಅವನ್ನು ಮರೆಮಾಡಲಾಗಿದೆ.",
@@ -784,6 +802,7 @@ const kn: Record<StringKey, string> = {
   navLogin: "ಸೈನ್ ಇನ್",
   signOut: "ಸೈನ್ ಔಟ್",
   signedInAs: "{id} ಆಗಿ ಲಾಗಿನ್ ಆಗಿದ್ದೀರಿ",
+  ...hiringKn,
 };
 
 const STRINGS: Record<Lang, Record<StringKey, string>> = { en, hi, kn };

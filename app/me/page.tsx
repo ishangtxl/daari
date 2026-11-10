@@ -1,15 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/components/app-state";
 import { mergeProfile } from "@/lib/profile";
-import { ErrorNote, Icon, Loading, ReadAloud, Shell } from "@/components/ui";
+import { ErrorNote, Icon, Loading, ReadAloud, Shell, SignOutButton } from "@/components/ui";
 import { errorKey, postForm, postJson, postRaw } from "@/lib/client/api";
 import type { Profile, ResumeData } from "@/lib/types";
 
 export default function Me() {
-  const { ready, t, effectiveLang, profile, resume, resumeReview, resumeRemoved, update, clear } = useApp();
+  const { ready, t, effectiveLang, profile, user, resume, resumeReview, resumeRemoved, update, clear } = useApp();
   const router = useRouter();
   const [busy, setBusy] = useState<"upload" | "build" | "pdf" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -17,6 +17,11 @@ export default function Me() {
   const [confirmed, setConfirmed] = useState(false);
   const [template, setTemplate] = useState<"clear" | "trade">("clear");
   const fileInput = useRef<HTMLInputElement>(null);
+  // The number someone signed in with is the one employers should call, unless they say otherwise.
+  const signedInPhone = user?.provider === "phone" ? user.id.replace(/^\+91/, "") : "";
+  useEffect(() => {
+    if (ready && !profile.phone && signedInPhone) update((current) => ({ profile: { ...current.profile, phone: current.profile.phone || signedInPhone } }));
+  }, [ready, profile.phone, signedInPhone, update]);
 
   if (!ready) return <Shell><span /></Shell>;
 
@@ -117,8 +122,8 @@ export default function Me() {
           <button type="button" className="btn btn-quiet" disabled={busy !== null} onClick={() => fileInput.current?.click()}>{t("uploadResume")}</button>
         </div>
         {!hasWork && <p className="honest-note">{t("needWork")}</p>}
-        {busy === "upload" && <Loading text={t("uploading")} stops={3} />}
-        {busy === "build" && <Loading text={t("building")} stops={4} />}
+        {busy === "upload" && <Loading text={t("uploading")} />}
+        {busy === "build" && <Loading text={t("building")} />}
         {notice && <p className="all-met"><Icon name="check" />{notice}</p>}
         {problem && <ErrorNote text={problem} />}
 
@@ -148,6 +153,7 @@ export default function Me() {
         )}
 
         <section className="settings">
+          <SignOutButton />
           <button type="button" className="link-button danger" onClick={async () => { if (window.confirm(t("clearConfirm")) && !(await clear())) window.alert(t("genericError")); }}>{t("clearData")}</button>
         </section>
       </div>

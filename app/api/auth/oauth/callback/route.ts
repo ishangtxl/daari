@@ -11,6 +11,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
+import { safeNext } from "@/lib/postings";
 
 // Behind the proxy, req.url carries the app's internal address (localhost:3111), so redirects
 // use the public address from APP_BASE_URL when it is set.
@@ -85,6 +86,8 @@ export async function GET(req: NextRequest) {
     provider: "google",
   });
   await setSessionCookie(sessionToken);
+  const next = safeNext(jar.get("oauth_next")?.value);
+  jar.delete("oauth_next");
 
-  return NextResponse.redirect(new URL("/", origin(req)));
+  return NextResponse.redirect(new URL(next, origin(req)));
 }

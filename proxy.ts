@@ -23,5 +23,7 @@ export async function proxy(req: NextRequest) {
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = "/login";
   loginUrl.search = "";
+  // Come back to the page that was asked for, such as a job someone shared, once signed in.
+  if (pathname !== "/") loginUrl.searchParams.set("next", `${pathname}${req.nextUrl.search}`);
   return NextResponse.redirect(loginUrl);
 }

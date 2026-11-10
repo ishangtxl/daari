@@ -4,6 +4,7 @@ import { ROLES } from "../roles";
 import type { Job, MatchedJob, Profile, StopStatus } from "../types";
 import { fitBand, isRisky } from "../rank";
 import { decide, type Question } from "./jev";
+import { postings } from "./postings";
 
 let catalog: Job[] | null = null;
 
@@ -12,7 +13,8 @@ export function allJobs(): Job[] {
   return catalog;
 }
 
-export const jobById = (id: string) => allJobs().find((job) => job.id === id);
+/** A job from the catalog, or one posted on Daari, open or not. */
+export const jobById = (id: string) => allJobs().find((job) => job.id === id) ?? postings().job(id)?.job;
 
 /** What the person has said about themselves, used as the evidence for every decision. */
 export function evidence(profile: Profile) {
@@ -90,6 +92,8 @@ export function rankMatches(jobs: MatchedJob[]) {
     (a, b) =>
       Number(isRisky(a)) - Number(isRisky(b)) ||
       fitBand(a.fit) - fitBand(b.fit) ||
+      // Among jobs that fit as well, one posted on Daari comes first: it can be applied to right here.
+      Number(Boolean(b.direct)) - Number(Boolean(a.direct)) ||
       share(b) - share(a) ||
       b.met - a.met ||
       new Date(b.postedAt ?? 0).getTime() - new Date(a.postedAt ?? 0).getTime(),
@@ -98,10 +102,11 @@ export function rankMatches(jobs: MatchedJob[]) {
 
 const MIN_FIT = 0.15;
 
-export async function matchJobs(profile: Profile, limit = 24): Promise<{ jobs: MatchedJob[]; roles: string[] }> {
+export async function matchJobs(profile: Profile, limit = 24, posted: Job[] = postings().liveJobs()): Promise<{ jobs: MatchedJob[]; roles: string[] }> {
   const roles = await pickRoles(profile);
   const roleRank = new Map(roles.map((id, index) => [id, index]));
-  const candidates = allJobs()
+  // Jobs posted on Daari go first, so the limit never cuts them in favour of the catalog's.
+  const candidates = [...posted, ...allJobs()]
     .filter((job) => job.roles.some((id) => roleRank.has(id)))
     .sort((a, b) => Math.min(...a.roles.map((id) => roleRank.get(id) ?? 99)) - Math.min(...b.roles.map((id) => roleRank.get(id) ?? 99)))
     .slice(0, limit);

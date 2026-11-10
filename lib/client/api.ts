@@ -1,7 +1,7 @@
 import type { StringKey } from "../i18n";
 
 export class ApiError extends Error {
-  constructor(public code: string) {
+  constructor(public code: string, public details: Record<string, unknown> = {}) {
     super(code);
   }
 }
@@ -12,17 +12,32 @@ export function errorKey(error: unknown): StringKey {
   if (code === "too_many_requests") return "tooMany";
   if (code === "name_latin") return "needName";
   if (code === "no_text") return "noText";
+  if (code === "duplicate_posting") return "duplicatePosting";
+  if (code === "too_many_postings") return "tooManyPostings";
+  if (code === "already_applied") return "alreadyApplied";
+  if (code === "posting_closed") return "postingClosedError";
+  if (code === "not_found") return "postingGone";
   return "genericError";
 }
 
 async function ensureOk(res: Response) {
   if (res.ok) return res;
   const body = await res.json().catch(() => ({}));
-  throw new ApiError(body.error ?? "service_error");
+  throw new ApiError(body.error ?? "service_error", body);
 }
 
 export async function postJson<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return (await ensureOk(res)).json();
+}
+
+export async function getJson<T>(url: string): Promise<T> {
+  return (await ensureOk(await fetch(url, { cache: "no-store" }))).json();
+}
+
+/** PUT, PATCH or DELETE with an optional JSON body. */
+export async function sendJson<T>(method: "PUT" | "PATCH" | "DELETE", url: string, body?: unknown): Promise<T> {
+  const res = await fetch(url, { method, headers: body === undefined ? undefined : { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   return (await ensureOk(res)).json();
 }
 

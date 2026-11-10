@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { z } from "zod";
 import { getSession } from "../auth";
+import { BudgetError } from "./llm";
 import { fail, rateAllowed } from "./route";
 import { store, type Account, type Store } from "./store";
 
@@ -23,10 +24,10 @@ export async function currentAccount(): Promise<Account | null> {
 export function accountRoute<S extends z.ZodType | null>(
   name: string,
   schema: S,
-  handler: (input: S extends z.ZodType ? z.output<S> : null, account: Account, data: Store) => unknown,
+  handler: (input: S extends z.ZodType ? z.output<S> : null, account: Account, data: Store, params: Record<string, string>) => unknown,
   limit = 120,
 ) {
-  return async (req: Request) => {
+  return async (req: Request, context?: { params: Promise<Record<string, string>> }) => {
     const account = await currentAccount();
     if (!account) return fail("signed_out", 401);
     if (!rateAllowed(name, req, limit)) return fail("too_many_requests", 429);
@@ -47,9 +48,11 @@ export function accountRoute<S extends z.ZodType | null>(
     try {
       const data = store();
       data.touch(account);
-      const result = await handler(input as never, account, data);
+      const result = await handler(input as never, account, data, (await context?.params) ?? {});
+      if (result instanceof Response) return result;
       return NextResponse.json(result ?? { ok: true }, { headers: { "Cache-Control": "no-store" } });
     } catch (error) {
+      if (error instanceof BudgetError) return fail("over_budget", 503);
       // Never log the request body: it holds what the person said about themselves.
       console.error(`[${name}]`, error instanceof Error ? error.message : error);
       return fail("service_error", 500);

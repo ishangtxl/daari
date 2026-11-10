@@ -70,7 +70,7 @@ export default function Check() {
           </button>
         </div>
         <VoiceInput size="small" label={t("readOut")} onText={(heard) => { setText(heard); run(heard); }} />
-        {busy && <Loading text={t("checking")} stops={3} />}
+        {busy && <Loading text={t("checking")} />}
         {problem && <ErrorNote text={problem} onRetry={() => run(text)} />}
         {result && (
           <section className={`verdict ${warned ? "verdict-warn" : "verdict-clear"}`} aria-live="polite">

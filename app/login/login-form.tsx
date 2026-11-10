@@ -25,7 +25,9 @@ import {
 import { firebaseAuth, firebaseConfigured } from "@/lib/firebase-client";
 import { useApp } from "@/components/app-state";
 import { Icon, Shell } from "@/components/ui";
+import { ChooseLanguage } from "@/components/welcome";
 import { postJson } from "@/lib/client/api";
+import { safeNext } from "@/lib/postings";
 
 type Stage = "phone" | "otp";
 
@@ -39,7 +41,7 @@ export function LoginScreen({ google }: { google: boolean }) {
 }
 
 function LoginForm({ google }: { google: boolean }) {
-  const { ready, t, effectiveLang } = useApp();
+  const { ready, lang, t, effectiveLang } = useApp();
   const params = useSearchParams();
 
   const [stage, setStage] = useState<Stage>("phone");
@@ -48,6 +50,11 @@ function LoginForm({ google }: { google: boolean }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+
+  // Someone hiring signs in the same way, then goes straight to their postings.
+  const asked = safeNext(params.get("next"));
+  const [hiring, setHiring] = useState(asked.startsWith("/employer"));
+  const next = hiring && !asked.startsWith("/employer") ? "/employer" : asked;
 
   const confirmRef = useRef<ConfirmationResult | null>(null);
   const codeRef = useRef<HTMLInputElement>(null);
@@ -90,11 +97,14 @@ function LoginForm({ google }: { google: boolean }) {
         verifierRef.current = null;
       }
     };
-  // captchaKey in deps so the effect re-runs with a fresh div after resetVerifier().
+  // captchaKey in deps so the effect re-runs with a fresh div after resetVerifier(), and lang because
+  // the form only appears once a language is picked.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, captchaKey]);
+  }, [ready, captchaKey, lang]);
 
   if (!ready) return null;
+  // Someone new picks their language first, so signing in is already in it.
+  if (!lang) return <ChooseLanguage />;
 
   // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -170,7 +180,7 @@ function LoginForm({ google }: { google: boolean }) {
       await postJson("/api/auth/firebase", { idToken });
       // A full load, not a client-side move: the app then starts from this account's own data,
       // never from whatever the previous person on this phone left on screen.
-      window.location.replace("/");
+      window.location.replace(next);
     } catch (err: unknown) {
       const fbCode = (err as { code?: string }).code ?? "";
       if (fbCode === "auth/invalid-verification-code") {
@@ -204,7 +214,8 @@ function LoginForm({ google }: { google: boolean }) {
     <Shell>
       <div className="page" lang={effectiveLang}>
         <header className="page-head">
-          <h1>{t("loginTitle")}</h1>
+          {hiring && <p className="login-mode"><Icon name="shop" size={20} />{t("loginHiringMode")}</p>}
+          <h1>{hiring ? t("loginHiringTitle") : t("loginTitle")}</h1>
           <p>{t("loginSub")}</p>
         </header>
 
@@ -308,7 +319,7 @@ function LoginForm({ google }: { google: boolean }) {
             </div>
 
             <div className="row-actions">
-              <a href="/api/auth/oauth/google" className="btn btn-quiet login-google">
+              <a href={`/api/auth/oauth/google?next=${encodeURIComponent(next)}`} className="btn btn-quiet login-google">
                 <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
                   <path fill="#4285F4" d="M45.5 24.5c0-1.5-.1-3-.4-4.5H24v8.5h12.1c-.5 2.8-2.1 5.1-4.5 6.7v5.6h7.3c4.3-3.9 6.6-9.7 6.6-16.3z" />
                   <path fill="#34A853" d="M24 46c6.5 0 11.9-2.1 15.9-5.8l-7.3-5.6c-2.1 1.4-4.7 2.2-7.6 2.2-5.9 0-10.9-4-12.7-9.3H3.7v5.8C7.7 41.5 15.3 46 24 46z" />
@@ -320,6 +331,21 @@ function LoginForm({ google }: { google: boolean }) {
             </div>
           </>
         ) : null}
+
+        {stage === "phone" && (
+          hiring ? (
+            <button type="button" className="link-button" onClick={() => setHiring(false)}>{t("loginNotHiring")}</button>
+          ) : (
+            <section className="login-hiring">
+              <h2>{t("loginHiringAsk")}</h2>
+              <p>{t("loginHiringBody")}</p>
+              <button type="button" className="btn btn-quiet" onClick={() => setHiring(true)}>
+                <Icon name="shop" size={20} />
+                {t("loginHiringButton")}
+              </button>
+            </section>
+          )
+        )}
 
         <p className="honest-note login-privacy">
           <Icon name="shield" size={16} />

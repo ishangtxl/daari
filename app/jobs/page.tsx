@@ -5,7 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp, type ApplicationStatus } from "@/components/app-state";
 import { Chip, ChipGroup, Sheet } from "@/components/job-controls";
 import { CopyButton, ErrorNote, Icon, Loading, PayText, ReadAloud, RouteLine, Shell, TabebuiaTree } from "@/components/ui";
-import { errorKey, postJson } from "@/lib/client/api";
+import { errorKey, getJson, postJson } from "@/lib/client/api";
+import { applicationText } from "@/components/direct-apply";
+import { isPostingId, type MyApplication } from "@/lib/postings";
 import { ROLES } from "@/lib/roles";
 import { isRisky, sortJobs, type JobSort } from "@/lib/rank";
 import type { MatchedJob } from "@/lib/types";
@@ -16,6 +18,7 @@ type SalaryFilter = "all" | "5000" | "10000" | "20000";
 const DISTANCES: DistanceFilter[] = ["all", "5", "10", "20"];
 const DISTANCE_LABEL = { all: "anyDistance", "5": "within5", "10": "within10", "20": "within20" } as const;
 const SALARIES: SalaryFilter[] = ["all", "5000", "10000", "20000"];
+const SORT_LABEL = { recommended: "chipBest", distance: "chipNear", qualification: "eligibilitySort", salary: "chipPay" } as const;
 const SALARY_LABEL = { all: "anySalary", "5000": "salary5000Plus", "10000": "salary10000Plus", "20000": "salary20000Plus" } as const;
 
 function OpenJobs() {
@@ -33,7 +36,12 @@ function OpenJobs() {
   const [salaryFilter, setSalaryFilter] = useState<SalaryFilter>("all");
   const [sortBy, setSortBy] = useState<JobSort>("recommended");
   const [sheetOpen, setSheetOpen] = useState(false);
-  const key = `${profile.words}\u0000${profile.area.trim().toLocaleLowerCase("en-IN")}`;
+  // Changes whenever an employer posts, changes or closes a job on Daari, so saved matches refresh.
+  const [postingsVersion, setPostingsVersion] = useState<string | null>(null);
+  useEffect(() => {
+    getJson<{ version: string }>("/api/postings").then((result) => setPostingsVersion(result.version)).catch(() => setPostingsVersion(""));
+  }, []);
+  const key = `${profile.words}\u0000${profile.area.trim().toLocaleLowerCase("en-IN")}\u0000${postingsVersion ?? ""}`;
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -96,9 +104,9 @@ function OpenJobs() {
   useEffect(() => {
     // Matches depend on what the person has said and the area they live in.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (hasProfile && profile.area.trim() && (jobs === null || jobsKey !== key)) load();
+    if (postingsVersion !== null && hasProfile && profile.area.trim() && (jobs === null || jobsKey !== key)) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasProfile, key]);
+  }, [hasProfile, key, postingsVersion]);
 
   useEffect(() => {
     const needsDistance = distanceFilter !== "all" || sortBy === "distance";
@@ -150,6 +158,7 @@ function OpenJobs() {
     </form>
   );
 
+  const areaChanged = Boolean(location.trim()) && location.trim().toLocaleLowerCase("en-IN") !== profile.area.trim().toLocaleLowerCase("en-IN");
   const activeCount = (distanceFilter !== "all" ? 1 : 0) + (salaryFilter !== "all" ? 1 : 0);
 
   const clearFilters = () => {
@@ -184,26 +193,29 @@ function OpenJobs() {
 
   return (
     <>
-      {locationForm}
-      <section className="job-controls" aria-label={t("jobFilters")}>
+      {/* One line says what the list is; everything that changes it waits in a sheet, so the jobs come first. */}
+      <button type="button" className="search-summary" aria-label={t("jobFilters")} onClick={() => setSheetOpen(true)}>
+        <Icon name="pin" size={24} />
+        <span className="search-summary-text">
+          <strong>{t("jobsNear", { area: profile.area })}</strong>
+          <span>{[t(SORT_LABEL[sortBy]), activeCount > 0 && t("filtersOn", { count: activeCount })].filter(Boolean).join(" · ")}</span>
+        </span>
+        <span className="search-summary-change">{t("changeSearch")}</span>
+      </button>
+      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t("filterSheetTitle")} closeLabel={t("close")}>
+        <label className="field">
+          <span>{t("jobLocation")}</span>
+          <input value={location} placeholder={t("locationPlaceholder")} onChange={(event) => setLocation(event.target.value)} />
+        </label>
         <ChipGroup label={t("sortBy")}>
           <Chip selected={sortBy === "recommended"} icon="star" onClick={() => setSortBy("recommended")}>{t("chipBest")}</Chip>
           {distanceEnabled && <Chip selected={sortBy === "distance"} icon="pin" onClick={() => setSortBy("distance")}>{t("chipNear")}</Chip>}
           <Chip selected={sortBy === "qualification"} icon="tool" onClick={() => setSortBy("qualification")}>{t("eligibilitySort")}</Chip>
           <Chip selected={sortBy === "salary"} icon="rupee" onClick={() => setSortBy("salary")}>{t("chipPay")}</Chip>
         </ChipGroup>
-        <button type="button" className="btn btn-quiet filter-button" onClick={() => setSheetOpen(true)}>
-          <Icon name="filter" size={22} />
-          <span>{t("filterButton")}</span>
-          {activeCount > 0 && <span className="filter-badge" aria-label={String(activeCount)}>{activeCount}</span>}
-        </button>
-      </section>
-      {(sortBy === "recommended" || sortBy === "qualification") && (
-        <p className="sort-explanation">
-          {sortBy === "recommended" ? t("sortBestHint") : t("sortRequirementsHint")}
-        </p>
-      )}
-      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t("filterSheetTitle")} closeLabel={t("close")}>
+        {(sortBy === "recommended" || sortBy === "qualification") && (
+          <p className="sort-explanation">{sortBy === "recommended" ? t("sortBestHint") : t("sortRequirementsHint")}</p>
+        )}
         {distanceEnabled && (
           <ChipGroup label={t("howFar")}>
             {DISTANCES.map((value) => <Chip key={value} selected={distanceFilter === value} onClick={() => setDistanceFilter(value)}>{t(DISTANCE_LABEL[value])}</Chip>)}
@@ -214,8 +226,19 @@ function OpenJobs() {
         </ChipGroup>
         {salaryFilter !== "all" && noPayHidden > 0 && <p className="honest-note">{t("noPayHidden", { count: noPayHidden })}</p>}
         <div className="sheet-actions">
-          <button type="button" className="btn btn-primary" onClick={() => setSheetOpen(false)}>
-            {waitingForDistance || distanceLoading ? t("showJobsLoading") : t("showJobsButton", { count: filteredJobs.length })}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              setSheetOpen(false);
+              // A new area means a new search, so the jobs load again for it.
+              const area = location.trim();
+              if (area && area.toLocaleLowerCase("en-IN") !== profile.area.trim().toLocaleLowerCase("en-IN")) {
+                update({ profile: { ...profile, area }, jobs: null, jobsKey: "", plan: null });
+              }
+            }}
+          >
+            {areaChanged ? t("showJobsAgain") : waitingForDistance || distanceLoading ? t("showJobsLoading") : t("showJobsButton", { count: filteredJobs.length })}
           </button>
           {activeCount > 0 && <button type="button" className="link-button" onClick={() => { setDistanceFilter("all"); setSalaryFilter("all"); }}>{t("clearFilters")}</button>}
         </div>
@@ -236,7 +259,7 @@ function OpenJobs() {
         </div>
       )}
       {distanceProblem && <ErrorNote text={distanceProblem} onRetry={loadDistances} />}
-      {waitingForDistance || distanceLoading ? <Loading text={t("calculatingDistances")} stops={3} /> : filteredJobs.length ? (
+      {waitingForDistance || distanceLoading ? <Loading text={t("calculatingDistances")} /> : filteredJobs.length ? (
 
         <>
           <p className="job-results-count">{t("showingJobs", { count: filteredJobs.length })}</p>
@@ -249,12 +272,13 @@ function OpenJobs() {
                     <h3>{job.title[effectiveLang]}</h3>
                     <PayText className="job-pay" text={job.salaryText} />
                   </div>
+                  {job.direct && <p className="direct-badge"><Icon name="check" size={16} />{t("directBadge")}</p>}
                   <p className="job-where">
                     {job.employer}, {job.area}
                     {distanceByJobId?.[job.id] != null && <> · {t("distanceAway", { distance: distanceByJobId[job.id]!.toFixed(1) })}</>}
                   </p>
                   <RouteLine stops={job.stops} />
-                  <p className="job-meets">{t("meets", { met: job.met, total: job.stops.length })}</p>
+                  <p className="job-meets">{job.stops.length ? t("meets", { met: job.met, total: job.stops.length }) : t("noRequirements")}</p>
                   {isRisky(job) && <p className="job-warning"><Icon name="warning" size={18} />{t("warnListing")}</p>}
                 </Link>
               </li>
@@ -322,7 +346,7 @@ function Nearby() {
         <input value={area} placeholder="Jayanagar" onChange={(event) => setArea(event.target.value)} />
       </label>
       <button type="button" className="btn btn-primary" disabled={busy} onClick={run}>{t("findPlaces")}</button>
-      {busy && <Loading text={t("nearbyLoading")} stops={3} />}
+      {busy && <Loading text={t("nearbyLoading")} />}
       {problem && <ErrorNote text={problem} onRetry={run} />}
       {result && (
         <>
@@ -374,6 +398,13 @@ const STATUSES: ApplicationStatus[] = ["statusApplied", "statusCalled", "statusI
 
 function Applications() {
   const { t, effectiveLang, applications, update } = useApp();
+  // Applications sent through Daari are answered by the employer, so their status comes from the server.
+  const [direct, setDirect] = useState<Record<string, MyApplication>>({});
+  const hasDirect = applications.some((item) => isPostingId(item.jobId));
+  useEffect(() => {
+    if (!hasDirect) return;
+    getJson<{ applications: Record<string, MyApplication> }>("/api/postings/applied").then((result) => setDirect(result.applications)).catch(() => {});
+  }, [hasDirect]);
   if (!applications.length) return <p className="empty-text">{t("appliedEmpty")}</p>;
   return (
     <ul className="application-list">
@@ -381,6 +412,12 @@ function Applications() {
         <li key={item.jobId}>
           <Link href={`/jobs/${item.jobId}`}><h3>{item.title[effectiveLang]}</h3></Link>
           <p>{item.employer}</p>
+          {isPostingId(item.jobId) ? (
+            <p className="application-direct">
+              <span className="direct-badge"><Icon name="check" size={16} />{t("directBadge")}</span>
+              <span>{direct[item.jobId] ? t(applicationText(direct[item.jobId])) : t("appWaiting")}</span>
+            </p>
+          ) : (
           <select
             aria-label={item.title[effectiveLang]}
             value={item.status}
@@ -391,6 +428,7 @@ function Applications() {
           >
             {STATUSES.map((status) => <option key={status} value={status}>{t(status)}</option>)}
           </select>
+          )}
         </li>
       ))}
     </ul>
