@@ -113,17 +113,3 @@ describe("sortJobs by pay and distance", () => {
     expect(ids(sortJobs(jobs, "recommended"))).toEqual(["b", "a"]);
   });
 });
-
-describe("sortJobs by featured", () => {
-  const star = { metadata: { isFeatured: true } as never };
-
-  it("moves featured listings up, keeping the rest in their original order", () => {
-    const jobs = [make("a", []), make("star1", [], star), make("b", []), make("star2", [], star)];
-    expect(ids(sortJobs(jobs, "featured"))).toEqual(["star1", "star2", "a", "b"]);
-  });
-
-  it("keeps risky featured listings last", () => {
-    const risky = make("risky", [], { ...star, signals: { asks_payment: 0.9, asks_sensitive: 0, unrealistic: 0 } });
-    expect(ids(sortJobs([risky, make("plain", [])], "featured"))).toEqual(["plain", "risky"]);
-  });
-});

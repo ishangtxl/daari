@@ -32,8 +32,6 @@ const PATHS: Record<string, ReactNode> = {
   rupee: <path d="M7 5h10M7 9h10M7 5c6 0 6 8 0 8h-1l7 7" />,
   filter: <path d="M4 6h16M7 12h10M10 18h4" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
-  list: <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />,
-  users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>,
   compass: <><circle cx="12" cy="12" r="9" /><path d="M15.5 8.5l-2 5-5 2 2-5z" /></>,
 };
 
@@ -45,20 +43,13 @@ export function Icon({ name, size = 24 }: { name: keyof typeof PATHS | string; s
   );
 }
 
-const SEEKER_NAV = [
+const NAV = [
   { href: "/", icon: "home", label: "navHome" },
   { href: "/talk", icon: "mic", label: "navTalk" },
   { href: "/jobs", icon: "briefcase", label: "navJobs" },
   { href: "/learn", icon: "book", label: "navLearn" },
   { href: "/check", icon: "shield", label: "navCheck" },
   { href: "/me", icon: "person", label: "navMe" },
-] as const;
-
-const PROVIDER_NAV = [
-  { href: "/", icon: "home", label: "navHome" },
-  { href: "/provider/talk", icon: "mic", label: "navProviderTalk" },
-  { href: "/provider/listings", icon: "list", label: "navMyListings" },
-  { href: "/provider/applicants", icon: "users", label: "navApplicants" },
 ] as const;
 
 export const LANG_LABEL: Record<Lang, string> = { en: "English", hi: "हिन्दी", kn: "ಕನ್ನಡ" };
@@ -119,10 +110,8 @@ export function LanguageSwitcher() {
 function AuthButton() {
   const { t, user, signOut } = useApp();
   const router = useRouter();
-  const pathname = usePathname();
 
   if (!user) {
-    if (pathname === "/login") return null;
     return (
       <Link href="/login" className="btn btn-quiet auth-btn" aria-label={t("navLogin")}>
         <Icon name="person" size={20} />
@@ -148,33 +137,29 @@ function AuthButton() {
 }
 
 /** `fill` pins the page to the screen and lets the page scroll inside itself, as a chat needs. */
-export function Shell({ children, hideNav, fill = false }: { children: ReactNode; hideNav?: boolean; fill?: boolean }) {
-  const { t, role } = useApp();
+export function Shell({ children, fill = false }: { children: ReactNode; fill?: boolean }) {
+  const { t } = useApp();
   const pathname = usePathname();
   // Before sign-in every tab leads back to the sign-in page, so it shows none of them.
-  const isAuth = pathname === "/login" || hideNav;
-  const nav = role === "job_provider" ? PROVIDER_NAV : SEEKER_NAV;
+  const signingIn = pathname === "/login";
   return (
-    <div className={["shell", isAuth && "shell-auth", role === "job_provider" && "shell-provider", fill && "shell-fill"].filter(Boolean).join(" ")}>
-      {!isAuth && (
-        <nav className="nav" aria-label="Daari" style={role === "job_provider" ? { gridTemplateColumns: `repeat(${nav.length}, 1fr)` } : undefined}>
+    <div className={["shell", signingIn && "shell-bare", fill && "shell-fill"].filter(Boolean).join(" ")}>
+      {!signingIn && (
+        <nav className="nav" aria-label="Daari">
           <Link href="/" className="nav-brand">Daari</Link>
-          {nav.map((item) => {
+          {NAV.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
               <Link key={item.href} href={item.href} className="nav-item" aria-current={active ? "page" : undefined}>
                 <Icon name={item.icon} />
-                <span>{t(item.label as Parameters<typeof t>[0])}</span>
+                <span>{t(item.label)}</span>
               </Link>
             );
           })}
         </nav>
       )}
       <main className="main">
-        <div className="topbar">
-          <LanguageSwitcher />
-          {!isAuth && <AuthButton />}
-        </div>
+        <div className="topbar"><LanguageSwitcher />{!signingIn && <AuthButton />}</div>
         {children}
       </main>
     </div>

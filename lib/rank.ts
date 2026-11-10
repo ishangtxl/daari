@@ -1,6 +1,6 @@
-import { isFeaturedJob, type MatchedJob } from "./types";
+import type { MatchedJob } from "./types";
 
-export type JobSort = "recommended" | "distance" | "qualification" | "salary" | "featured";
+export type JobSort = "recommended" | "distance" | "qualification" | "salary";
 
 /** Listings that ask for money or sensitive details never float to the top of any list. */
 export const isRisky = (job: MatchedJob) => job.signals.asks_payment >= 0.7 || job.signals.asks_sensitive >= 0.7;
@@ -40,7 +40,6 @@ export function sortJobs(jobs: MatchedJob[], mode: JobSort, distanceKm?: Record<
   const km = (job: MatchedJob) => distanceKm?.[job.id] ?? KM_UNKNOWN;
   const pay = (job: MatchedJob) => job.salaryMin ?? Number.NEGATIVE_INFINITY;
   const byMode = (a: MatchedJob, b: MatchedJob) => {
-    if (mode === "featured") return Number(isFeaturedJob(b)) - Number(isFeaturedJob(a));
     if (mode === "qualification") return byQualification(a, b);
     if (mode === "distance") return km(a) === km(b) ? 0 : km(a) - km(b);
     return pay(a) === pay(b) ? 0 : pay(b) - pay(a);

@@ -57,6 +57,8 @@ export const MIGRATIONS: string[] = [
     PRIMARY KEY (user_id, job_id)
   ) STRICT, WITHOUT ROWID;
   `,
+  // Shipped to production with the employer side, which has since been taken out for review.
+  // The live database already has these tables, so this stays, unused, to keep the version in step.
   `
   -- Listings posted by providers. The whole job is kept as JSON in body; the columns are what
   -- queries filter, sort and check ownership by. Featured placement lives here too.

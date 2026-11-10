@@ -1,10 +1,8 @@
 import type { StringKey } from "../i18n";
 
 export class ApiError extends Error {
-  signals?: string[];
-  constructor(public code: string, signals?: string[]) {
+  constructor(public code: string) {
     super(code);
-    this.signals = signals;
   }
 }
 
@@ -20,7 +18,7 @@ export function errorKey(error: unknown): StringKey {
 async function ensureOk(res: Response) {
   if (res.ok) return res;
   const body = await res.json().catch(() => ({}));
-  throw new ApiError(body.error ?? "service_error", body.signals);
+  throw new ApiError(body.error ?? "service_error");
 }
 
 export async function postJson<T>(url: string, body: unknown): Promise<T> {

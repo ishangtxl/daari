@@ -55,8 +55,6 @@ export type Job = {
 
 export type StopStatus = "met" | "gap" | "unsure";
 export type MatchedJob = Omit<Job, "description"> & {
-  /** Present on listings posted directly by a shop. */
-  metadata?: PostedJobMetadata;
   stops: { id: string; status: StopStatus }[];
   met: number;
   /** How well the work itself fits this person, from 0 to 1. */
@@ -96,81 +94,6 @@ export const resumeSchema = z.object({
   education: z.array(z.string().max(200)).max(8).default([]),
   languages: z.array(z.string().max(60)).max(10).default([]),
 });
-
-export type BusinessProofType = "gstin" | "udyam" | "merchant_upi" | "storefront" | "none";
-
-export type BusinessVerification = {
-  proofType: BusinessProofType;
-  proofValue?: string;
-  isVerified: boolean;
-  businessName: string;
-  businessAddress: string;
-  locality: string;
-  pincode?: string;
-};
-
-export type PostedJobMetadata = {
-  source: "direct_employer";
-  /** Role as typed/selected by the employer; used with business + locality to detect duplicate postings. */
-  roleCategory?: string;
-  posterPhone: string;
-  posterName?: string;
-  posterId: string;
-  verification: BusinessVerification;
-  whatsappContact: string;
-  status: "active" | "rejected" | "paused";
-  rejectionReason?: string;
-  createdAt: string;
-  expiresAt: string;
-  /** Promoted listing. Set by the server from the database; already false once `featuredUntil` has passed. */
-  isFeatured?: boolean;
-  featuredUntil?: string;
-  featuredRequested?: boolean;
-};
-
-export type FullJob = Job & {
-  metadata?: PostedJobMetadata;
-};
-
-/** A promoted listing that has not run out. */
-export const isFeaturedJob = (job: { metadata?: Pick<PostedJobMetadata, "isFeatured" | "featuredUntil"> }) =>
-  Boolean(job.metadata?.isFeatured && (!job.metadata.featuredUntil || job.metadata.featuredUntil > new Date().toISOString()));
-
-export const APPLICANT_STATUSES = ["new", "shortlisted", "rejected", "hired"] as const;
-export type ApplicantStatus = (typeof APPLICANT_STATUSES)[number];
-
-/** What a seeker's profile looked like when they applied. Later profile edits do not change it. */
-export type ApplicantSnapshot = {
-  name: string;
-  phone: string;
-  area: string;
-  skills: string[];
-  experience: { role: string; years: string }[];
-  languages: string[];
-  education: string;
-};
-
-/** An applicant as a provider sees them. `phone` stays null until the provider shortlists them. */
-export type Applicant = Omit<ApplicantSnapshot, "phone"> & {
-  id: number;
-  listingId: string;
-  status: ApplicantStatus;
-  appliedAt: string;
-  phone: string | null;
-};
-
-export type ListingApplicants = {
-  listing: {
-    id: string;
-    title: Localized;
-    employer: string;
-    area: string;
-    status: PostedJobMetadata["status"];
-    featured: boolean;
-    featuredRequested: boolean;
-  };
-  applicants: Applicant[];
-};
 
 /** A YouTube video or playlist picked for a learning step. */
 export type Video = {

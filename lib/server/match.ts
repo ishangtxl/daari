@@ -1,27 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { ROLES } from "../roles";
-import type { FullJob, Job, MatchedJob, Profile, StopStatus } from "../types";
+import type { Job, MatchedJob, Profile, StopStatus } from "../types";
 import { fitBand, isRisky } from "../rank";
 import { decide, type Question } from "./jev";
-import { getActiveJobsSync } from "./jobs-store";
 
 let catalog: Job[] | null = null;
 
-function getPostedJobsSync(): FullJob[] {
-  try {
-    return getActiveJobsSync();
-  } catch (error) {
-    console.error("[match] Could not read posted jobs:", error);
-    return [];
-  }
-}
-
-/** Live provider listings first (newest first), then the catalog. */
-export function allJobs(): FullJob[] {
+export function allJobs(): Job[] {
   catalog ??= JSON.parse(readFileSync(path.join(process.cwd(), "data/jobs.json"), "utf8")) as Job[];
-  const posted = getPostedJobsSync();
-  return [...posted, ...catalog];
+  return catalog;
 }
 
 export const jobById = (id: string) => allJobs().find((job) => job.id === id);

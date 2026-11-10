@@ -6,8 +6,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 
-// /api/admin/ has no session: it is closed unless the request carries the ADMIN_SECRET header, which the route checks itself.
-const PUBLIC_PREFIXES = ["/login", "/api/auth/", "/api/admin/"];
+const PUBLIC_PREFIXES = ["/login", "/api/auth/"];
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
@@ -24,10 +23,5 @@ export async function proxy(req: NextRequest) {
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = "/login";
   loginUrl.search = "";
-  // After signing in, go back to where they were headed. Posting a job is for employers.
-  if (pathname !== "/") {
-    loginUrl.searchParams.set("redirect", pathname);
-    if (pathname.startsWith("/jobs/post")) loginUrl.searchParams.set("intent", "employer");
-  }
   return NextResponse.redirect(loginUrl);
 }
