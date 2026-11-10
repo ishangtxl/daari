@@ -96,7 +96,7 @@ export default function Talk() {
   );
 
   const send = useCallback(
-    async (text: string, spoken: boolean, retrying = false) => {
+    async (text: string, spoken: boolean, retrying = false, goal?: Goal) => {
       setProblem(null);
       setLastText({ text, spoken });
       setBusy(true);
@@ -107,7 +107,8 @@ export default function Talk() {
       // The greeting becomes part of the conversation once they answer it, so the counsellor knows what was asked.
       const opening: ChatMessage[] = messages.length ? messages : [{ id: newId(), role: "assistant", content: greeting }];
       const withUser: ChatMessage[] = retrying ? opening : [...opening, { id: newId(), role: "user", content: text }];
-      const current = { ...profile, words };
+      // A goal chosen with this message is part of it, not something to catch up on later.
+      const current = { ...profile, words, ...(goal ? { goal } : {}) };
       if (!retrying) update({ messages: withUser, profile: current });
       try {
         const res = await postRaw("/api/chat", {
@@ -180,10 +181,7 @@ export default function Talk() {
                     type="button"
                     className="chip goal-reply"
                     disabled={busy}
-                    onClick={() => {
-                      update((current) => ({ profile: { ...current.profile, goal: choice.goal } }));
-                      void send(t(choice.say), false);
-                    }}
+                    onClick={() => void send(t(choice.say), false, false, choice.goal)}
                   >
                     <Icon name={choice.icon} size={20} />
                     {t(choice.label)}

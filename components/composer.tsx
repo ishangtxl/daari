@@ -97,7 +97,15 @@ export const Composer = forwardRef<ComposerHandle, {
           />
         )}
         {text && !recorder.recording ? (
-          <button type="submit" className="composer-button composer-send" disabled={!canSend} aria-label={t("send")}>
+          <button
+            type="submit"
+            className="composer-button composer-send"
+            disabled={!canSend}
+            aria-label={t("send")}
+            // Keep the keyboard up, as messaging apps do. Taking focus would also bring the tabs
+            // back mid-press, which moves this button out from under the finger before the tap lands.
+            onMouseDown={(event) => event.preventDefault()}
+          >
             <Icon name="send" size={24} />
           </button>
         ) : (
