@@ -57,40 +57,15 @@ export const MIGRATIONS: string[] = [
     PRIMARY KEY (user_id, job_id)
   ) STRICT, WITHOUT ROWID;
   `,
-  // Shipped to production with the employer side, which has since been taken out for review.
-  // The live database already has these tables, so this stays, unused, to keep the version in step.
+  // Version 2 shipped briefly with an employer side that was taken out again. Databases that ran it
+  // have its two tables, which version 3 removes; a new database has nothing to do here.
   `
-  -- Listings posted by providers. The whole job is kept as JSON in body; the columns are what
-  -- queries filter, sort and check ownership by. Featured placement lives here too.
-  CREATE TABLE job_listings (
-    id TEXT PRIMARY KEY,
-    poster_id TEXT NOT NULL,
-    status TEXT NOT NULL CHECK (status IN ('active', 'paused', 'rejected')),
-    employer TEXT NOT NULL,
-    area TEXT NOT NULL,
-    role_category TEXT NOT NULL DEFAULT '',
-    posted_at TEXT NOT NULL,
-    expires_at TEXT,
-    is_featured INTEGER NOT NULL DEFAULT 0 CHECK (is_featured IN (0, 1)),
-    featured_until TEXT,
-    featured_requested INTEGER NOT NULL DEFAULT 0 CHECK (featured_requested IN (0, 1)),
-    body TEXT NOT NULL CHECK (json_valid(body))
-  ) STRICT;
-  CREATE INDEX job_listings_by_poster ON job_listings (poster_id, posted_at);
-  CREATE INDEX job_listings_feed ON job_listings (status, is_featured, posted_at);
-
-  -- A seeker applying to a listing. The snapshot is the profile as it was at that moment.
-  CREATE TABLE listing_applications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    listing_id TEXT NOT NULL REFERENCES job_listings (id) ON DELETE CASCADE,
-    seeker_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'shortlisted', 'rejected', 'hired')),
-    snapshot TEXT NOT NULL CHECK (json_valid(snapshot)),
-    applied_at TEXT NOT NULL DEFAULT ${NOW},
-    updated_at TEXT NOT NULL DEFAULT ${NOW},
-    UNIQUE (listing_id, seeker_id)
-  ) STRICT;
-  CREATE INDEX listing_applications_by_listing ON listing_applications (listing_id, applied_at);
+  SELECT 1;
+  `,
+  `
+  DROP TABLE IF EXISTS listing_applications;
+  DROP TABLE IF EXISTS job_listings;
+  DELETE FROM documents WHERE kind IN ('role', 'providerDraft', 'providerMessages', 'postedListings');
   `,
 ];
 

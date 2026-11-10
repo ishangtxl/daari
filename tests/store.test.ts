@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { DatabaseSync } from "node:sqlite";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { migrate, MIGRATIONS, openDatabase } from "../lib/server/db";
 import { createStore, MAX_KEPT, type Store } from "../lib/server/store";
@@ -38,6 +38,27 @@ describe("migrations", () => {
     expect(version()).toBe(MIGRATIONS.length);
     migrate(db);
     expect(version()).toBe(MIGRATIONS.length);
+  });
+
+  it("remove the employer tables and settings from a database that had them, keeping everything else", () => {
+    const old = new DatabaseSync(path.join(dir, "old.db"));
+    old.exec(MIGRATIONS[0]);
+    // What the briefly shipped version 2 created, cut down to what matters here.
+    old.exec(`
+      CREATE TABLE job_listings (id TEXT PRIMARY KEY, poster_id TEXT NOT NULL, body TEXT NOT NULL) STRICT;
+      CREATE TABLE listing_applications (id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id TEXT NOT NULL REFERENCES job_listings (id)) STRICT;
+      INSERT INTO job_listings VALUES ('job_shop_1', 'phone:+918888888888', '{}');
+      INSERT INTO users (id, provider) VALUES ('phone:+918888888888', 'phone');
+      INSERT INTO documents (user_id, kind, body) VALUES ('phone:+918888888888', 'lang', '"kn"'), ('phone:+918888888888', 'role', '"job_provider"');
+      PRAGMA user_version = 2;
+    `);
+    migrate(old);
+    const tables = (old.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map((row) => row.name);
+    expect(tables).not.toContain("job_listings");
+    expect(tables).not.toContain("listing_applications");
+    expect(createStore(old).load("phone:+918888888888").documents).toEqual({ lang: "kn" });
+    expect((old.prepare("SELECT COUNT(*) AS n FROM documents").get() as { n: number }).n).toBe(1);
+    old.close();
   });
 
   it("refuse a database written by newer code", () => {
