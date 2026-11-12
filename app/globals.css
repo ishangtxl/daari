@@ -176,6 +176,7 @@ html[lang="hi"] .tabs button { padding-block: 12px 6px; }
 .btn-primary { background: var(--cobalt); color: #fff; }
 .btn-quiet { border-color: var(--cobalt); color: var(--cobalt); background: var(--paper); }
 .btn-quiet[aria-pressed="true"] { background: var(--cobalt); color: #fff; }
+.btn-danger { background: var(--warn); color: #fff; }
 .link-button { background: none; border: 0; padding: 8px 0; color: var(--cobalt); text-decoration: underline; cursor: pointer; font-size: 16px; text-align: start; }
 .link-button.danger { color: var(--warn); }
 .row-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
@@ -388,7 +389,6 @@ html[lang="hi"] .tabs button { padding-block: 12px 6px; }
 .template-pick legend { font-weight: 700; padding: 0; font-size: 16px; margin-bottom: 4px; }
 .template-pick label { display: flex; gap: 6px; align-items: center; min-height: 40px; }
 .template-pick input { width: 20px; height: 20px; accent-color: var(--cobalt); }
-.settings { display: grid; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); justify-items: start; }
 .language-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Loading: the stops light up in order along the route. */
@@ -425,6 +425,7 @@ html[lang="hi"] .tabs button { padding-block: 12px 6px; }
 
 @media (hover: hover) and (pointer: fine) {
   .btn-primary:hover:not(:disabled) { background: var(--cobalt-deep); }
+  .btn-danger:hover:not(:disabled) { background: #8f1e18; }
   .btn-quiet:hover:not(:disabled) { background: var(--sky); }
   .home-link:hover, .goal-row:hover { background: var(--sky); }
   .job-row:hover h3 { color: var(--cobalt); }
@@ -483,6 +484,32 @@ html[lang="hi"] .tabs button { padding-block: 12px 6px; }
 @media (min-width: 900px) {
   .shell:not(.shell-bare) .topbar { justify-content: flex-end; }
   .shell:not(.shell-bare) .topbar-brand { display: none; }
+}
+.topbar-end { display: flex; align-items: center; gap: 8px; }
+.account-button {
+  display: grid; place-items: center; width: 44px; height: 44px; border: 2px solid var(--cobalt); border-radius: 50%;
+  background: var(--paper); color: var(--cobalt); cursor: pointer;
+}
+.account-button[aria-expanded="true"] { background: var(--sky); }
+.account-who { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 17px; overflow-wrap: anywhere; }
+.account-who .icon { flex: none; color: var(--cobalt); }
+.account-actions { display: grid; gap: 10px; }
+.account-action {
+  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 76px; padding: 12px 16px; border: 2px solid var(--line);
+  border-radius: 10px; background: var(--paper); color: var(--cobalt); text-align: start; cursor: pointer;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out;
+}
+.account-action:active:not(:disabled) { background: var(--sky); border-color: var(--cobalt); }
+.account-action:disabled { opacity: 0.6; cursor: wait; }
+.account-action > .icon, .account-action > .spinner { flex: none; }
+.account-action > span { display: grid; gap: 2px; min-width: 0; }
+.account-action strong { font-family: var(--font-head); font-size: 19px; color: var(--ink); }
+.account-action span span { color: var(--muted); font-size: 15px; line-height: 1.4; }
+.account-delete { justify-self: start; }
+.account-confirm { display: grid; gap: 12px; justify-items: start; font-size: 17px; line-height: 1.5; }
+@media (hover: hover) and (pointer: fine) {
+  .account-button:hover, .account-action:hover:not(:disabled) { background: var(--sky); }
+  .account-action:hover:not(:disabled) { border-color: var(--cobalt); }
 }
 .lang-switch { position: relative; }
 .lang-button {

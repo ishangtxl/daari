@@ -127,6 +127,23 @@ describe("store", () => {
     }
   });
 
+  it("starts over by forgetting what it learned, keeping the language and other accounts", () => {
+    for (const account of [ravi, asha]) {
+      store.save(account.id, { lang: "kn", profile: { ...emptyProfile(), area: "Jayanagar" }, roles: ["driver"], applications: [application("x")] });
+      store.appendMessages(account.id, [message("hello")]);
+    }
+    store.reset(ravi.id);
+    const after = store.load(ravi.id);
+    expect(after.documents).toEqual({ lang: "kn" });
+    expect(after.messages).toEqual([]);
+    expect(after.applications).toEqual([]);
+    expect(store.load(asha.id).documents.roles).toEqual(["driver"]);
+    expect(store.load(asha.id).messages).toHaveLength(1);
+    // Starting over keeps the account, so its numbering of messages starts again cleanly.
+    store.appendMessages(ravi.id, [message("again")]);
+    expect(store.load(ravi.id).messages.map((m) => m.id)).toEqual(["again"]);
+  });
+
   it("refuses rows the schema does not allow, even if code tried to write one", () => {
     expect(() =>
       db.prepare("INSERT INTO applications (user_id, job_id, title, employer, apply_link, status, applied_at) VALUES (?, 'x', '{}', '', '', 'statusHired', '')").run(ravi.id),

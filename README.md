@@ -31,8 +31,9 @@ Open the live site and sign in with one of these test numbers. They are set up i
 |---|---|
 | 8888888888 | 101010 |
 | 7777777777 | 111111 |
+| 9000000001 to 9000000006 | 123456 |
 
-Each number is its own account. Other people may be using them too, so "Delete my information" on the Resume tab gives you a clean start. [TESTING.md](TESTING.md) has a full walk-through as Ravi, a phone repair worker, in English and Hindi.
+Each number is its own account. Other people may be using them too, so tap the person button in the top corner and choose **Start over** for a clean start. The same button signs you out. [TESTING.md](TESTING.md) has a full walk-through as Ravi, a phone repair worker, in English and Hindi.
 
 ## What it does
 
@@ -168,7 +169,7 @@ Accounts are kept in one SQLite file, through Node's built-in `node:sqlite`, so 
 - **Postings and applications.** Only the employer who posted a job can see who applied or change it. Only the person who applied can see or take back their application. Employers see an application by an id of its own, never the applicant's account id. Deleting an employer's account removes their postings and every application to them. Deleting a job seeker's account removes their applications from every employer's view.
 - **Saving.** The browser sends only what changed, a moment after it changes, with retries, and sends any pending save when the page is closed. Each save is one transaction. A message sent twice is stored once, and each account keeps its newest 1,000 messages. If two phones change the same part at once, the later save wins.
 - **Migrations.** Each schema change is a new entry at the end of `MIGRATIONS`, applied in order on start and tracked in `PRAGMA user_version`. Never edit one that has shipped. The app refuses to start on a database written by newer code.
-- **Deleting.** "Delete my information" removes the account and everything it owns.
+- **Starting over and deleting.** Both are in the account sheet, behind the person button in the top bar. "Start over" forgets the conversation, profile, plan, resume and applied list but keeps the account, its language, its postings and applications already sent to employers. "Delete my information" removes the account and everything it owns, postings included.
 - **Where it lives.** `DATABASE_PATH`, which production requires, so a deploy can never start from an empty file inside a release. Locally it defaults to `.data/daari.db`.
 - **Backups.** The deploy script copies the database before every deploy and at least once a day, keeping a week of copies in `~/daari/backups`. To restore one, stop the app (`sudo systemctl stop daari`), copy the backup over `DATABASE_PATH`, delete any `-wal` and `-shm` files beside it, and start the app again.
 

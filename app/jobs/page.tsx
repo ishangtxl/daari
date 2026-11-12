@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp, type ApplicationStatus } from "@/components/app-state";
-import { Chip, ChipGroup, Sheet } from "@/components/job-controls";
-import { CopyButton, ErrorNote, Icon, Loading, PayText, ReadAloud, RouteLine, Shell, TabebuiaTree } from "@/components/ui";
+import { Chip, ChipGroup } from "@/components/job-controls";
+import { CopyButton, ErrorNote, Icon, Loading, PayText, ReadAloud, RouteLine, Sheet, Shell, TabebuiaTree } from "@/components/ui";
 import { errorKey, getJson, postJson } from "@/lib/client/api";
 import { applicationText } from "@/components/direct-apply";
 import { isPostingId, type MyApplication } from "@/lib/postings";

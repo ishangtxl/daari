@@ -63,6 +63,9 @@ export function createStore(db: DatabaseSync) {
       status = excluded.status, applied_at = excluded.applied_at, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
   `);
   const deleteUser = db.prepare("DELETE FROM users WHERE id = ?");
+  const forgetDocuments = db.prepare("DELETE FROM documents WHERE user_id = ? AND kind <> 'lang'");
+  const forgetMessages = db.prepare("DELETE FROM messages WHERE user_id = ?");
+  const forgetApplications = db.prepare("DELETE FROM applications WHERE user_id = ?");
 
   return {
     /** Records the account on each visit, so its rows always have an owner to belong to. */
@@ -121,6 +124,19 @@ export function createStore(db: DatabaseSync) {
           if (result.changes) seq++;
         }
         trimMessages.run(userId, seq - MAX_KEPT);
+      });
+    },
+
+    /**
+     * Starting over: Daari forgets what it learned about the person, and the list of jobs they
+     * applied to, but keeps their language. Jobs they posted stay up and applications they sent stay
+     * with the employer, since other people already depend on both.
+     */
+    reset(userId: string) {
+      transaction(db, () => {
+        forgetDocuments.run(userId);
+        forgetMessages.run(userId);
+        forgetApplications.run(userId);
       });
     },
 

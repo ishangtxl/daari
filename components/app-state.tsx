@@ -62,6 +62,8 @@ type AppState = Stored & {
   update: (patch: Partial<Stored> | ((current: Stored) => Partial<Stored>)) => void;
   /** Deletes the account's data on the server and here. False if the server could not do it. */
   clear: () => Promise<boolean>;
+  /** Forgets what Daari learned, keeping the account and its language. False if the server could not do it. */
+  startOver: () => Promise<boolean>;
   effectiveLang: Lang;
   signOut: () => Promise<void>;
 };
@@ -270,13 +272,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setStored((current) => ({ ...current, ...(typeof patch === "function" ? patch(current) : patch) }));
   }, []);
 
-  const clear = useCallback(async () => {
+  // Both end the same way here: a blank account in the same language. Only what the server keeps differs.
+  const forget = useCallback(async (request: { url: string; method: string }) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     await savingRef.current;
-    const res = await fetch("/api/state", { method: "DELETE" }).catch(() => null);
+    const res = await fetch(request.url, { method: request.method }).catch(() => null);
     if (!res?.ok) return false;
     const fresh = { ...initial(latestRef.current.lang), user: latestRef.current.user };
-    // The server now holds nothing, so the next save writes only what is set again, starting with the language.
+    // The server now holds at most the language, so the next save writes only what is set again, starting with it.
     savedRef.current = Object.fromEntries(SYNCED.map((key) => [key, fresh[key]]));
     delete savedRef.current.lang;
     savedMessagesRef.current = new Set();
@@ -284,6 +287,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setStored(fresh);
     return true;
   }, []);
+  const clear = useCallback(() => forget({ url: "/api/state", method: "DELETE" }), [forget]);
+  const startOver = useCallback(() => forget({ url: "/api/state/reset", method: "POST" }), [forget]);
 
   const signOut = useCallback(async () => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -298,8 +303,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [flush]);
 
   const value = useMemo<AppState>(
-    () => ({ ...stored, ready, update, clear, signOut, effectiveLang, t: (key, values) => translate(effectiveLang, key, values) }),
-    [stored, ready, update, clear, signOut, effectiveLang],
+    () => ({ ...stored, ready, update, clear, startOver, signOut, effectiveLang, t: (key, values) => translate(effectiveLang, key, values) }),
+    [stored, ready, update, clear, startOver, signOut, effectiveLang],
   );
   if (loadFailed) {
     return (

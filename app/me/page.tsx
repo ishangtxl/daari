@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/components/app-state";
 import { mergeProfile } from "@/lib/profile";
-import { ErrorNote, Icon, Loading, ReadAloud, Shell, SignOutButton } from "@/components/ui";
+import { ErrorNote, Icon, Loading, ReadAloud, Shell } from "@/components/ui";
 import { errorKey, postForm, postJson, postRaw } from "@/lib/client/api";
 import type { Profile, ResumeData } from "@/lib/types";
 
 export default function Me() {
-  const { ready, t, effectiveLang, profile, user, resume, resumeReview, resumeRemoved, update, clear } = useApp();
+  const { ready, t, effectiveLang, profile, user, resume, resumeReview, resumeRemoved, update } = useApp();
   const router = useRouter();
   const [busy, setBusy] = useState<"upload" | "build" | "pdf" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -151,11 +151,6 @@ export default function Me() {
             </button>
           </section>
         )}
-
-        <section className="settings">
-          <SignOutButton />
-          <button type="button" className="link-button danger" onClick={async () => { if (window.confirm(t("clearConfirm")) && !(await clear())) window.alert(t("genericError")); }}>{t("clearData")}</button>
-        </section>
       </div>
     </Shell>
   );

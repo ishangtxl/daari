@@ -134,6 +134,15 @@ describe("postings", () => {
     expect(board.applicationsBy(ravi)).toEqual({});
   });
 
+  it("stay up, with the applications sent to them, when either side starts over", () => {
+    const id = board.create(shop, body());
+    board.apply(ravi, id, card());
+    createStore(db).reset(shop);
+    createStore(db).reset(ravi);
+    expect(board.job(id)).not.toBeNull();
+    expect(board.forOwner(shop, id)!.people).toHaveLength(1);
+  });
+
   it("drop a person's applications when they delete their account", () => {
     const id = board.create(shop, body());
     board.apply(ravi, id, card());

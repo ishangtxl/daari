@@ -10,9 +10,8 @@
  *   3. We exchange the Firebase ID token for our own session cookie via
  *      POST /api/auth/firebase, then redirect to "/".
  *
- * Test numbers (Firebase Console → Authentication → Sign-in method → Phone
- *   → Phone numbers for testing):
- *   Add e.g. +91 9999999999 / code 123456 to bypass SMS during development.
+ * Test numbers sign in without an SMS. They are listed in the README and set in Firebase Console →
+ *   Authentication → Sign-in method → Phone → Phone numbers for testing (ten at most).
  */
 
 import { Suspense, useEffect, useRef, useState } from "react";

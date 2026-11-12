@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { speak, stopSpeaking, unlockAudio, usePlayback } from "@/lib/client/audio";
 import { parsePay } from "@/lib/pay";
 import { LANGS, type Lang, type StopStatus } from "@/lib/types";
-import { useApp } from "./app-state";
+import { useApp, type AuthUser } from "./app-state";
 import { AutoOnRoad } from "./art";
 
 export { TabebuiaTree } from "./art";
@@ -16,6 +16,9 @@ const PATHS: Record<string, ReactNode> = {
   mic: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></>,
   briefcase: <><rect x="3" y="8" width="18" height="12" rx="2" /><path d="M9 8V5h6v3M3 13h18" /></>,
   book: <path d="M4 5c3-1 6-1 8 1v14c-2-2-5-2-8-1zM20 5c-3-1-6-1-8 1v14c2-2 5-2 8-1z" />,
+  document: <path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6" />,
+  restart: <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 3.5v4h4" />,
+  exit: <path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9" />,
   person: <><circle cx="12" cy="8" r="4" /><path d="M4 21c1-5 4-7 8-7s7 2 8 7" /></>,
   shield: <path d="M12 3l8 3v6c0 5-3 8-8 9-5-1-8-4-8-9V6zM12 8v5M12 16v.5" />,
   speaker: <><path d="M4 10v4h4l5 4V6L8 10z" /><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" /></>,
@@ -56,7 +59,7 @@ const NAV = [
   { href: "/jobs", icon: "briefcase", label: "navJobs" },
   { href: "/learn", icon: "book", label: "navLearn" },
   { href: "/check", icon: "shield", label: "navCheck" },
-  { href: "/me", icon: "person", label: "navMe" },
+  { href: "/me", icon: "document", label: "navMe" },
 ] as const;
 
 // The employer pages have their own few tabs: the seeker's tabs mean nothing to someone hiring.
@@ -127,22 +130,103 @@ export function LanguageSwitcher() {
   );
 }
 
-/** Signing out lives with the account, not in every screen's corner where it is easy to tap by mistake. */
-export function SignOutButton() {
-  const { t, signOut } = useApp();
+/** Phone numbers are shown in two groups of five, the way people say them aloud. */
+function accountName(user: AuthUser) {
+  if (user.provider === "google") return user.name ?? "Google";
+  const digits = user.id.replace(/^\+91/, "");
+  return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+}
+
+type AccountStep = "menu" | "startOver" | "delete";
+
+/**
+ * Everything about the account in one place, behind one button in the corner of every screen: who is
+ * signed in, starting over, signing out and deleting. It takes two taps to sign out, so it cannot
+ * happen by mistake, and the two that lose information each say plainly what goes and what stays
+ * before anything happens.
+ */
+function AccountButton() {
+  const { t, user, startOver, clear, signOut } = useApp();
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<AccountStep>("menu");
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Coming back from a question puts focus back on the menu, instead of losing it with the removed button.
+  const [returned, setReturned] = useState(false);
+  if (!user) return null;
+
+  const go = (next: AccountStep) => {
+    setReturned(next === "menu");
+    setStep(next);
+    setFailed(false);
+  };
+  const close = () => {
+    setOpen(false);
+    setStep("menu");
+    setFailed(false);
+    setReturned(false);
+  };
+  async function run(action: () => Promise<boolean | void>, then: string) {
+    setBusy(true);
+    setFailed(false);
+    const done = (await action()) !== false;
+    setBusy(false);
+    if (!done) return setFailed(true);
+    close();
+    router.push(then);
+  }
+
+  const confirm = (forgets: string, keeps: string | null, yes: string, action: () => Promise<boolean>, danger: boolean) => (
+    <>
+      <div className="account-confirm">
+        <p>{forgets}</p>
+        {keeps && <p className="honest-note">{keeps}</p>}
+        <ReadAloud id={`account-${step}`} text={[forgets, keeps].filter(Boolean).join(" ")} />
+      </div>
+      {failed && <ErrorNote text={t("genericError")} />}
+      <div className="sheet-actions">
+        <button type="button" className={`btn ${danger ? "btn-danger" : "btn-primary"}`} disabled={busy} onClick={() => run(action, "/")}>
+          {busy ? <span className="spinner" /> : <Icon name={danger ? "warning" : "restart"} size={20} />}
+          {yes}
+        </button>
+        {/* Focus lands on the safe choice, so a stray Enter never deletes anything. */}
+        <button type="button" className="btn btn-quiet" disabled={busy} autoFocus onClick={() => go("menu")}>{t("goBack")}</button>
+      </div>
+    </>
+  );
+
+  const title = step === "startOver" ? t("startOverTitle") : step === "delete" ? t("deleteTitle") : t("account");
   return (
-    <button
-      type="button"
-      className="btn btn-quiet"
-      onClick={async () => {
-        await signOut();
-        router.push("/login");
-      }}
-    >
-      <Icon name="person" size={20} />
-      <span>{t("signOut")}</span>
-    </button>
+    <>
+      <button type="button" className="account-button" aria-label={t("account")} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
+        <Icon name="person" size={22} />
+      </button>
+      <Sheet open={open} onClose={close} title={title} closeLabel={t("close")}>
+        {step === "menu" && (
+          <>
+            <p className="account-who">
+              <Icon name={user.provider === "phone" ? "phone" : "person"} size={20} />
+              <span>{t("signedInAs", { id: accountName(user) })}</span>
+            </p>
+            <div className="account-actions">
+              <button type="button" className="account-action" autoFocus={returned} onClick={() => go("startOver")}>
+                <Icon name="restart" />
+                <span><strong>{t("startOver")}</strong><span>{t("startOverHint")}</span></span>
+              </button>
+              <button type="button" className="account-action" disabled={busy} onClick={() => run(signOut, "/login")}>
+                {busy ? <span className="spinner" /> : <Icon name="exit" />}
+                <span><strong>{t("signOut")}</strong><span>{t("signOutHint")}</span></span>
+              </button>
+            </div>
+            {failed && <ErrorNote text={t("genericError")} />}
+            <button type="button" className="link-button danger account-delete" onClick={() => go("delete")}>{t("clearData")}</button>
+          </>
+        )}
+        {step === "startOver" && confirm(t("startOverForgets"), t("startOverKeeps"), t("startOverYes"), startOver, false)}
+        {step === "delete" && confirm(t("clearConfirm"), null, t("deleteYes"), clear, true)}
+      </Sheet>
+    </>
   );
 }
 
@@ -172,11 +256,37 @@ export function Shell({ children, fill = false }: { children: ReactNode; fill?: 
       <main className="main">
         <div className="topbar">
           {signingIn ? <span className="topbar-brand">ದಾರಿ</span> : <Link href={hiring ? "/employer" : "/"} className="topbar-brand" aria-label="Daari">ದಾರಿ</Link>}
-          <LanguageSwitcher />
+          <div className="topbar-end">
+            <LanguageSwitcher />
+            {!signingIn && <AccountButton />}
+          </div>
         </div>
         {children}
       </main>
     </div>
+  );
+}
+
+/** A bottom sheet on phones. Uses the native dialog, so focus, Escape and the backdrop just work. */
+export function Sheet({ open, onClose, title, closeLabel, children }: { open: boolean; onClose: () => void; title: string; closeLabel: string; children: ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+  return (
+    <dialog ref={ref} className="sheet" aria-labelledby={titleId} onClose={onClose} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="sheet-body">
+        <div className="sheet-head">
+          <h2 id={titleId}>{title}</h2>
+          <button type="button" className="sheet-close" aria-label={closeLabel} onClick={onClose}><Icon name="close" size={26} /></button>
+        </div>
+        {children}
+      </div>
+    </dialog>
   );
 }
 

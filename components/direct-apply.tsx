@@ -8,8 +8,7 @@ import type { StringKey } from "@/lib/i18n";
 import { applicantCardSchema, REPORT_REASONS, type MyApplication, type PostingState, type ReportReason } from "@/lib/postings";
 import type { Job, StopStatus } from "@/lib/types";
 import { useApp } from "./app-state";
-import { Sheet } from "./job-controls";
-import { ErrorNote, Icon } from "./ui";
+import { ErrorNote, Icon, Sheet } from "./ui";
 
 export type PostingView = { job: Omit<Job, "description">; state: PostingState; own: boolean; application: MyApplication | null };
 
