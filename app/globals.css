@@ -574,9 +574,9 @@ body:has(dialog[open]) { overflow: hidden; }
 .load-failed { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 16px; padding: 24px; text-align: center; font-size: 19px; }
 
 /* Auth */
-.login-divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 16px; }
-.login-divider::before, .login-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .login-google { gap: 10px; min-height: 52px; }
+/* Google asks for its mark on white, so it sits in a white disc on the cobalt button. */
+.login-google-mark { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #fff; flex: none; }
 .login-privacy { display: flex; align-items: flex-start; gap: 8px; font-size: 15px; color: var(--muted); padding-top: 4px; }
 .login-privacy .icon { flex: none; margin-top: 2px; }
 

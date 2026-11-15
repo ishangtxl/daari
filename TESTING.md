@@ -2,7 +2,7 @@
 
 Ravi has a 10th pass and no ITI, and spent two years fixing phones at his uncle's shop in Jayanagar. He is looking for a repair job.
 
-**Setup:** open https://145-223-23-79.sslip.io in a private Chrome window, which starts with no saved data. Sign in with one of the Firebase test numbers, which log in with a fixed code and send no SMS. Allow the microphone when asked. Job matches and AI wording vary between runs, so expect different jobs and numbers.
+**Setup:** open https://145-223-23-79.sslip.io in a private Chrome window, which starts with no saved data. Sign in with a Google account. Allow the microphone when asked. Job matches and AI wording vary between runs, so expect different jobs and numbers.
 
 ## Flow
 
@@ -73,10 +73,10 @@ Ravi has a 10th pass and no ITI, and spent two years fixing phones at his uncle'
 
 ## Accounts
 
-- Finish a few steps on one test number, then sign out from the person button in the top corner. Expect: the next screen shows nothing of that person.
-- Sign in with the other test number. Expect: a fresh start, with none of the first person's conversation, plan or jobs.
-- Sign out and back in with the first number, or open the site on another phone. Expect: the conversation, plan, applications and resume are all still there.
-- From the person button, choose **Delete my information** and confirm. Expect: it is gone after a refresh and on any other phone, along with any jobs that number posted.
+- Finish a few steps on one Google account, then sign out from the person button in the top corner. Expect: the next screen shows nothing of that person.
+- Sign in with a second Google account. Expect: a fresh start, with none of the first person's conversation, plan or jobs.
+- Sign out and back in with the first account, or open the site on another phone. Expect: the conversation, plan, applications and resume are all still there.
+- From the person button, choose **Delete my information** and confirm. Expect: it is gone after a refresh and on any other phone, along with any jobs that account posted.
 
 ## Eligibility sorting
 

@@ -25,15 +25,7 @@ Small employers can post on Daari too. A shop owner describes the job by talking
 
 ## Try it
 
-Open the live site and sign in with one of these test numbers. They are set up in Firebase, so no SMS is sent. Type the code when it asks.
-
-| Number | Code |
-|---|---|
-| 8888888888 | 101010 |
-| 7777777777 | 111111 |
-| 9000000001 to 9000000006 | 123456 |
-
-Each number is its own account. Other people may be using them too, so tap the person button in the top corner and choose **Start over** for a clean start. The same button signs you out. [TESTING.md](TESTING.md) has a full walk-through as Ravi, a phone repair worker, in English and Hindi.
+Open the live site and sign in with your Google account. Your conversation, plan and applications are saved to that account. To start fresh, tap the person button in the top corner and choose **Start over**. The same button signs you out. [TESTING.md](TESTING.md) has a full walk-through as Ravi, a phone repair worker, in English and Hindi.
 
 ## What it does
 
@@ -108,7 +100,7 @@ Paste or read out a job message from WhatsApp, Telegram or SMS. Daari names the 
   </tr>
 </table>
 
-Most of the jobs these people end up doing are in small shops and workshops that never post online. The sign-in page asks "Hiring for your shop or business?", and the same phone sign-in takes the employer to their own pages: their postings, a new posting, and a way back to finding work.
+Most of the jobs these people end up doing are in small shops and workshops that never post online. The sign-in page asks "Hiring for your shop or business?", and the same Google sign-in takes the employer to their own pages: their postings, a new posting, and a way back to finding work.
 
 - **Posting.** The employer says what the job is, where, the pay, the timings and what the person must know. A language model turns that into a posting for them to check and correct: a title, what the work involves, pay and timings, and up to six requirements, each written so a job seeker can answer yes or no. Jev picks the kind of work, which decides who sees it. If none of the listed kinds fits, the employer types their own and Jev matches it to the nearest one. On publishing, the posting is translated into English, Hindi and Kannada, and the employer's own wording is kept as typed.
 - **Screening.** Jev checks the employer's description, and again the final posting, for three things that stop it going up: asking applicants to pay (a fee, a deposit, a uniform), asking for an OTP, bank details, Aadhaar or PAN before an interview, and turning people away by caste, religion or community. If the description asked for money, the employer has to describe the job again, so a draft that quietly dropped the fee cannot be posted. Pay that looks too good for the work is a caution, not a block. On test postings, clean ones scored at most 0.37 on every check and the bad ones 0.93 to 0.97, against a cut-off of 0.6.
@@ -128,7 +120,7 @@ Most of the jobs these people end up doing are in small shops and workshops that
 | Local businesses | Google Places, or a Google Maps search when no key is set |
 | Road distances | Google Routes API |
 | Learning videos | YouTube Data API |
-| Sign-in | Firebase phone sign-in and Google sign-in, then a signed session cookie |
+| Sign-in | Google sign-in, then a signed session cookie |
 | Accounts | SQLite, through Node's built-in `node:sqlite` |
 | Resume PDF | Fixed templates filled from JSON with `@react-pdf/renderer` |
 
@@ -164,7 +156,7 @@ tests/               Unit tests (vitest)
 
 Accounts are kept in one SQLite file, through Node's built-in `node:sqlite`, so there is no database server or native module to install. `lib/server/db.ts` opens it and applies the migrations, `lib/server/store.ts` holds every query, and `lib/state.ts` has the schemas both the browser and the server check against.
 
-- **One account's data only.** The account id comes from the signed session cookie (`phone:+91…` or `google:…`), and every query is scoped by it. Nothing the browser sends can choose the account.
+- **One account's data only.** The account id comes from the signed session cookie (`google:…`), and every query is scoped by it. Nothing the browser sends can choose the account.
 - **Tables.** `users`, then `documents` (one JSON document per part of the account, such as `profile` or `plan`), `messages` (one row per message, in order) and `applications`. Hiring adds `postings`, `posting_applications` (one per person per posting, holding the card they agreed to send) and `posting_reports`. They are `STRICT`, check their JSON and allowed values, and are deleted with their account through foreign keys. `lib/server/postings.ts` holds the hiring queries.
 - **Postings and applications.** Only the employer who posted a job can see who applied or change it. Only the person who applied can see or take back their application. Employers see an application by an id of its own, never the applicant's account id. Deleting an employer's account removes their postings and every application to them. Deleting a job seeker's account removes their applications from every employer's view.
 - **Saving.** The browser sends only what changed, a moment after it changes, with retries, and sends any pending save when the page is closed. Each save is one transaction. A message sent twice is stored once, and each account keeps its newest 1,000 messages. If two phones change the same part at once, the later save wins.
@@ -198,7 +190,7 @@ GOOGLE_ROUTES_API_KEY=   # optional: road-distance sorting and filters
 YOUTUBE_API_KEY=         # optional: real videos and playlists in learning plans
 ```
 
-Every page needs sign-in, so `AUTH_SECRET` (at least 32 characters) and the Firebase keys in `.env.example` are needed too. Add test numbers under Firebase Console → Authentication → Sign-in method → Phone to sign in without SMS. Google sign-in stays hidden until `GOOGLE_SIGNIN=on`. Turn that on only after `GOOGLE_REDIRECT_URI` is added as an authorised redirect URI in Google Cloud. In production, `APP_BASE_URL` sets the public address that Google sign-in returns to.
+Every page needs sign-in, so `AUTH_SECRET` (at least 32 characters) and the Google keys in `.env.example` are needed too. Google sign-in stays off until `GOOGLE_SIGNIN=on`. Turn that on only after `GOOGLE_REDIRECT_URI` is added as an authorised redirect URI in Google Cloud. In production, `APP_BASE_URL` sets the public address that Google sign-in returns to.
 
 | Command | What it does |
 |---|---|
