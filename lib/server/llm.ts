@@ -70,6 +70,9 @@ export class BudgetError extends Error {}
 
 // How long to wait for a provider to start replying before trying the next one.
 const JSON_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS ?? 45_000);
+// A cap, not a cost: Bob spends about one token per character of Kannada, so caps sized for
+// English cut Kannada replies off.
+const DEFAULT_MAX_TOKENS = 3000;
 const STREAM_TIMEOUT_MS = Number(process.env.LLM_STREAM_TIMEOUT_MS ?? 15_000);
 
 /** Text that a model sometimes returns as a list of lines. */
@@ -145,7 +148,7 @@ export async function chatJson<S extends z.ZodType>(
           model,
           messages,
           temperature: 0.2,
-          max_tokens: options.maxTokens ?? 1500,
+          max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
           reasoning_effort: "none",
           response_format: { type: "json_object" },
         }, JSON_TIMEOUT_MS);
@@ -161,6 +164,11 @@ export async function chatJson<S extends z.ZodType>(
       try {
         const payload = await res.json();
         record(task, provider.name, model, payload.usage);
+        // A reply cut off at the token limit would be cut off again, so go straight to the next provider.
+        if (payload.choices?.[0]?.finish_reason === "length") {
+          providerError = new Error(`${provider.name} reply was cut off at ${options.maxTokens ?? DEFAULT_MAX_TOKENS} tokens`);
+          break;
+        }
         return schema.parse(parseJson(payload.choices?.[0]?.message?.content ?? ""));
       } catch (error) {
         providerError = error;
@@ -187,7 +195,7 @@ export async function chatStream(task: string, messages: Message[], signal?: Abo
         model,
         messages,
         temperature: 0.4,
-        max_tokens: 300,
+        max_tokens: 600,
         reasoning_effort: "none",
         stream: true,
         stream_options: { include_usage: true },

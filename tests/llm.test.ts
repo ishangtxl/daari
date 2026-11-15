@@ -86,6 +86,13 @@ describe("language model providers", () => {
     expect(asked[1]).toEqual({ provider: "zenmux", model: "openai/gpt-6.1-terra" });
   });
 
+  it("goes straight to ZenMux when Bob's reply is cut off at the token limit", async () => {
+    const cut = json({ choices: [{ message: { content: '{"answer": "unfin' }, finish_reason: "length" }] });
+    const asked = fakeFetch((provider) => (provider === "bob" ? cut : reply('{"answer":"from luna"}')));
+    expect(await chatJson("t", schema, messages)).toEqual({ answer: "from luna" });
+    expect(asked.map((a) => a.provider)).toEqual(["bob", "zenmux"]);
+  });
+
   it("uses only ZenMux when there is no Bob key", async () => {
     vi.stubEnv("IBM_BOB_API_KEY", "");
     const asked = fakeFetch(() => reply('{"answer":"from luna"}'));

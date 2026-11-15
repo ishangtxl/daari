@@ -21,6 +21,6 @@ export const POST = jsonRoute("apply-kit", schema, async ({ lang, jobId, profile
   const kit = await chatJson("apply-kit", kitSchema, [
     { role: "system", content: applyKitPrompt(lang) },
     { role: "user", content: `Job: ${job.title.en} at ${job.employer}\n${job.description.slice(0, 1500)}\n\nThe person's own words:\n${evidence(profile)}` },
-  ], { maxTokens: 2000 });
+  ], { maxTokens: 4000 });
   return { kit };
 }, 15);

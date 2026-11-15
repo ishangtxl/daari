@@ -9,9 +9,8 @@ import { POSTING_SIGNAL_KEYS, type PostingBody, type PostingForm, type PostingSi
 import type { Lang } from "../types";
 import { decide, nouls } from "./jev";
 import { chatJson, looseText } from "./llm";
-import { LANGUAGE_RULE } from "./prompts";
+import { LANGUAGE_NAME, LANGUAGE_RULE } from "./prompts";
 
-const LANGUAGE_NAME: Record<Lang, string> = { en: "English", hi: "Hindi", kn: "Kannada" };
 
 export const POSTING_SIGNALS: Record<PostingSignal, string> = {
   asks_payment: "The job posting requires applicants to pay money, such as a registration fee, deposit, training charge, or a uniform or kit cost, to get the job or an interview.",
@@ -86,7 +85,7 @@ const translationSchema = z.object({
   requirements: z.array(localized.extend({ kind: z.enum(KINDS).catch("other").default("other") })).default([]),
 });
 
-function translatePrompt(lang: Lang) {
+export function translatePrompt(lang: Lang) {
   return `Translate this job posting for workers in Bangalore into English, Hindi and Kannada. The employer wrote it in ${LANGUAGE_NAME[lang]}. Return JSON with:
 - title: {en, hi, kn}
 - summary: {en, hi, kn}
@@ -112,7 +111,7 @@ export async function buildPosting(form: PostingForm, signals: PostingSignals): 
   const translated = await chatJson("posting-translate", translationSchema, [
     { role: "system", content: translatePrompt(form.lang) },
     { role: "user", content: JSON.stringify({ title: form.title, summary: form.summary, timings: form.timings || null, requirements: form.requirements }) },
-  ], { maxTokens: 2500 });
+  ], { maxTokens: 5000 });
   if (translated.requirements.length !== form.requirements.length) throw new Error("Translation changed the number of requirements");
   // The employer's own words stay exactly as typed in their language.
   const own = <T extends Record<Lang, string>>(value: T, original: string) => ({ ...value, [form.lang]: original });

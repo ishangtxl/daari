@@ -17,7 +17,7 @@ export const POST = jsonRoute("resume-build", schema, async ({ lang, profile }) 
   const { review, ...draft } = await chatJson("resume", draftSchema, [
     { role: "system", content: resumePrompt(lang) },
     { role: "user", content: state },
-  ], { role: "resume", maxTokens: 2000 });
+  ], { role: "resume", maxTokens: 4000 });
 
   const bullets = draft.experience.flatMap((item, itemIndex) =>
     item.bullets.map((text, bulletIndex) => ({ key: `b${itemIndex}_${bulletIndex}`, text })),
