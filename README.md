@@ -36,7 +36,7 @@ Small employers can post on Daari too. A shop owner describes the job by talking
 
 ## Try it
 
-Open the live site and sign in with your Google account. Your conversation, plan and applications are saved to that account. To start fresh, tap the person button in the top corner and choose **Start over**. The same button signs you out. [TESTING.md](TESTING.md) has a full walk-through as Ravi, a phone repair worker, in English and Hindi.
+Open the live site and sign in with your Google account. Your conversation, plan and applications are saved to that account. To start fresh, tap the person button in the top corner and choose **Start over**. The same button signs you out. [TESTING.md](TESTING.md) is a step-by-step test script: Ravi, a phone repair worker, finds and applies for a job, and a shop owner hires him.
 
 ## What it does
 
@@ -160,6 +160,7 @@ lib/
 data/                The job catalog and the checked course list
 scripts/             Catalog builder, scam, posting and prompt evaluations, end-to-end browser run
 deploy/              Deploy script, systemd units, Caddy config, database backups
+spikes/              The early experiments that chose the job, speech and model APIs. Not part of the app
 tests/               Unit tests (vitest)
 ```
 
@@ -174,7 +175,7 @@ Accounts are kept in one SQLite file, through Node's built-in `node:sqlite`, so 
 - **Migrations.** Each schema change is a new entry at the end of `MIGRATIONS`, applied in order on start and tracked in `PRAGMA user_version`. Never edit one that has shipped. The app refuses to start on a database written by newer code.
 - **Starting over and deleting.** Both are in the account sheet, behind the person button in the top bar. "Start over" forgets the conversation, profile, plan, resume and applied list but keeps the account, its language, its postings and applications already sent to employers. "Delete my information" removes the account and everything it owns, postings included.
 - **Where it lives.** `DATABASE_PATH`, which production requires, so a deploy can never start from an empty file inside a release. Locally it defaults to `.data/daari.db`.
-- **Backups.** The deploy script copies the database before every deploy and at least once a day, keeping a week of copies in `~/daari/backups`. To restore one, stop the app (`sudo systemctl stop daari`), copy the backup over `DATABASE_PATH`, delete any `-wal` and `-shm` files beside it, and start the app again.
+- **Backups.** The deploy script copies the database before every deploy and at least once a day, keeping a week of copies. To restore one, stop the app, copy the backup over `DATABASE_PATH`, delete any `-wal` and `-shm` files beside it, and start the app again.
 
 Only the language choice is kept in the browser, for the screens before sign-in.
 
@@ -196,13 +197,13 @@ A pay filter keeps a job only when the listing's stated minimum monthly pay is a
 
 `pnpm test` runs the unit tests: job matching and ranking, profile merging, road distances, the YouTube picker, the account store, and postings. The store tests use a real SQLite file. They check that two accounts never see each other's data, that a resent message is saved once, and that deleting an account removes everything it owns and nothing else. The posting tests check that only the employer sees who applied, that a closed or expired posting takes no applications, that a withdrawn application disappears from the employer's view, and that three reports take a posting down.
 
-[TESTING.md](TESTING.md) is the manual test plan, written as one person's path through the app.
+[TESTING.md](TESTING.md) is the manual test script, with what to do and what to expect at each step.
 
 ## Deployment
 
 The live app runs on a VPS. It checks GitHub every minute, and a new commit on `main` goes live after its unit tests and build pass, usually within about 70 seconds. If the new version fails either step, or will not start, the site stays on the last working version.
 
-The app runs as the `daari` service behind Caddy, from `~/daari/current`. Its keys are in `~/daari/shared/.env`, which is not in git, and changing them needs `sudo systemctl restart daari`. `~/daari/deploy.log` shows each deploy, `readlink ~/daari/current` shows which commit is live, and `journalctl -u daari -f` shows the app's logs. `deploy/` holds the deploy script, services and Caddy config.
+The app runs as a systemd service behind Caddy, and its keys live in an environment file on the server, outside git. `deploy/` holds the deploy script, the services and the Caddy config.
 
 ## Known limits
 
@@ -212,7 +213,6 @@ The app runs as the `daari` service behind Caddy, from `~/daari/current`. Its ke
 - If two phones signed in to one account change the same thing at the same moment, the later save wins.
 - A posting taken down by reports stays down. There is no review screen yet to put back one that was reported unfairly.
 - Applicants wait for the employer to call. The employer's own number is not shown to them.
-- `spikes/` holds the throwaway scripts behind the early API and model choices. They are not part of the app.
 
 ## Team
 

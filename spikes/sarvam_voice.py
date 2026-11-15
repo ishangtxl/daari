@@ -1,7 +1,7 @@
 """Round-trip Kannada and Hindi through Sarvam: text -> speech -> text, timing each step.
 
-The audio is synthesised, so this proves the API and latency, not accuracy on real speakers with
-background noise. That still needs a test with real recordings.
+The audio is synthesised, so this measures the API and its latency, not accuracy on real speakers
+with background noise.
 """
 import base64
 import json
