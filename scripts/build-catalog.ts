@@ -57,6 +57,14 @@ const ENRICH_PROMPT = `You prepare job listings for people with limited formal e
 - requirements: up to 6 concrete things the applicant must have, taken only from the listing, most important first. Each is {en, hi, kn, kind} where kind is education, experience, skill, licence or other. Write each so it can be checked against what a person says, like "Has an ITI qualification". Skip vague items like "hard working". Never invent a requirement.
 Output JSON only.`;
 
+// Listings sometimes include a recruiter's phone number or email. The app never needs them (people
+// apply through the listing's own link), so they are not stored in a file that is published with the code.
+function withoutContacts(text: string) {
+  return text
+    .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "(email removed)")
+    .replace(/(?:\+?91[\s-]?)?(?:0?[6-9]\d{4}[\s-]?\d{5}|0?80[\s-]?\d{4}[\s-]?\d{4})\b/g, "(phone removed)");
+}
+
 function hash(text: string) {
   return createHash("sha1").update(text).digest("hex").slice(0, 16);
 }
@@ -160,7 +168,7 @@ async function main() {
         kn: req.kn,
       })),
       signals: { asks_payment: signals.asks_payment, asks_sensitive: signals.asks_sensitive, unrealistic: signals.unrealistic },
-      description: String(raw.job_description ?? "").slice(0, 3500),
+      description: withoutContacts(String(raw.job_description ?? "")).slice(0, 3500),
     });
   }
   writeFileSync("data/jobs.json", JSON.stringify(jobs));

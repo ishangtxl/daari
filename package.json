@@ -1,6 +1,7 @@
 {
   "name": "daari",
   "private": true,
+  "license": "MIT",
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
@@ -9,7 +10,10 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "catalog": "tsx --env-file=.env scripts/build-catalog.ts",
-    "scam-eval": "tsx --env-file=.env scripts/scam-eval.ts"
+    "scam-eval": "tsx --env-file=.env scripts/scam-eval.ts",
+    "posting-eval": "tsx --env-file=.env scripts/posting-eval.ts",
+    "prompt-eval": "tsx --env-file=.env scripts/prompt-eval.ts",
+    "llm-smoke": "tsx --env-file=.env scripts/llm-smoke.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",

@@ -103,7 +103,7 @@ Paste or read out a job message from WhatsApp, Telegram or SMS. Daari names the 
 Most of the jobs these people end up doing are in small shops and workshops that never post online. The sign-in page asks "Hiring for your shop or business?", and the same Google sign-in takes the employer to their own pages: their postings, a new posting, and a way back to finding work.
 
 - **Posting.** The employer says what the job is, where, the pay, the timings and what the person must know. A language model turns that into a posting for them to check and correct: a title, what the work involves, pay and timings, and up to six requirements, each written so a job seeker can answer yes or no. Jev picks the kind of work, which decides who sees it. If none of the listed kinds fits, the employer types their own and Jev matches it to the nearest one. On publishing, the posting is translated into English, Hindi and Kannada, and the employer's own wording is kept as typed.
-- **Screening.** Jev checks the employer's description, and again the final posting, for three things that stop it going up: asking applicants to pay (a fee, a deposit, a uniform), asking for an OTP, bank details, Aadhaar or PAN before an interview, and turning people away by caste, religion or community. If the description asked for money, the employer has to describe the job again, so a draft that quietly dropped the fee cannot be posted. Pay that looks too good for the work is a caution, not a block. On test postings, clean ones scored at most 0.37 on every check and the bad ones 0.93 to 0.97, against a cut-off of 0.6.
+- **Screening.** Jev checks the employer's description, and again the final posting, for three things that stop it going up: asking applicants to pay (a fee, a deposit, a uniform), asking for an OTP, bank details, Aadhaar or PAN before an interview, and turning people away by caste, religion or community. If the description asked for money, the employer has to describe the job again, so a draft that quietly dropped the fee cannot be posted. Pay that looks too good for the work is a caution, not a block. On 100 test postings (50 honest, and the same 50 with a demand for money added), it blocked all 50 that asked for money and none of the honest ones. Honest postings scored 0.05 to 0.12 and the others 0.92 to 0.97, against a cut-off of 0.6, with a median of 263 ms per check. `pnpm posting-eval` reruns it.
 - **Finding it.** Open postings join the catalog in matching, so they get the same fit check and the same route of requirements as any other job. Among jobs that fit equally well, one posted on Daari comes first, marked with a yellow **Apply on Daari** tag. Saved matches refresh whenever an employer posts, changes or closes a job. An employer can share a posting on WhatsApp. Someone who opens the link and is not signed in comes back to the job after signing in.
 - **Applying.** The person answers each requirement yes or no themselves, starting from what they have already told Daari (Daari never guesses a "no" for them), and adds a phone number and a note if they want. Before sending, they see exactly what the employer will get: name, phone, area, education, work done, skills and languages. That copy goes to that one employer only. They can take it back at any time, and then the employer no longer sees any of it.
 - **Hearing back.** The employer sees each applicant with their answers, can call them or send a WhatsApp message (written in the applicant's language), and can mark them shortlisted, not a fit or hired. The applicant sees, in words, where they stand: not looked at yet, seen, interested ("keep your phone close"), someone else chosen, or picked. Most job portals never tell people this.
@@ -114,7 +114,7 @@ Most of the jobs these people end up doing are in small shops and workshops that
 | Job | Tool |
 |---|---|
 | Speech to text, text to speech | Sarvam: `saaras:v3` (handles mixed Kannada, Hindi and English) and `bulbul:v3` |
-| Conversation, plans, writing, translation | IBM Bob's `premium` model. If Bob returns an error, an unusable reply or no reply in time, the same request goes to GPT-6 Luna through ZenMux (GPT-6.1 Terra for resumes), and Bob is skipped for a minute. `scripts/llm-smoke.ts` shows which one answered. |
+| Conversation, plans, writing, translation | IBM Bob's `premium` model. If Bob returns an error, an unusable reply or no reply in time, the same request goes to GPT-6 Luna through ZenMux (GPT-6.1 Terra for resumes), and Bob is skipped for a minute. `pnpm llm-smoke` shows which one answered. |
 | Fast yes/no decisions: job fit, each requirement, scam signals, whether a posting may go up and its kind of work, resume claims, when to make a plan, whether a video fits | Jev (TypeSafe), around 250ms per decision |
 | Job listings | JSearch, prepared ahead of time into `data/jobs.json` (212 Bangalore listings), plus the jobs employers post on Daari |
 | Local businesses | Google Places, or a Google Maps search when no key is set |
@@ -147,7 +147,7 @@ lib/
   server/            Everything with a key: the language model, Jev, Sarvam, YouTube, Places, Routes,
                      prompts, job matching, sign-in, and the database
 data/                The job catalog and the checked course list
-scripts/             Catalog builder, scam evaluation, end-to-end browser run
+scripts/             Catalog builder, scam, posting and prompt evaluations, end-to-end browser run
 deploy/              Deploy script, systemd units, Caddy config, database backups
 tests/               Unit tests (vitest)
 ```
@@ -200,7 +200,10 @@ Every page needs sign-in, so `AUTH_SECRET` (at least 32 characters) and the Goog
 | `pnpm typecheck` | Checks types |
 | `pnpm catalog` | Refreshes the job listings, using cached responses where it can |
 | `pnpm scam-eval` | Runs the scam signals over hand-written examples and real listings |
-| `node scripts/e2e.mjs <url> <screenshot dir> <wav>` | Drives the app in a browser with real APIs, using a WAV file as the microphone |
+| `pnpm posting-eval` | Screens 100 test postings, half of them asking for money, and prints how many were blocked and how long each check took |
+| `pnpm prompt-eval` | Runs every language-model prompt on hard cases and checks its rules: language and script, length, one question, no invented facts. Run it with `ZENMUX_API_KEY=` to test IBM Bob alone, or `IBM_BOB_API_KEY=` to test ZenMux alone |
+| `pnpm llm-smoke` | Sends one request and one streamed reply, and prints which provider answered |
+| `node --env-file=.env scripts/e2e.mjs <url> <screenshot dir> <wav>` | Drives the app in a browser with real APIs, using a WAV file as the microphone. It signs in with a session made from `AUTH_SECRET`, so that must match the server's |
 
 ### Spending
 
@@ -235,3 +238,7 @@ The app runs as the `daari` service behind Caddy, from `~/daari/current`. Its ke
 - A posting taken down by reports stays down. There is no review screen yet to put back one that was reported unfairly.
 - Applicants wait for the employer to call. The employer's own number is not shown to them.
 - `spikes/` holds the throwaway scripts behind the early API and model choices. They are not part of the app.
+
+## Team
+
+Built by team FreeThree (Ishan Gupta, Ayushman Kumar and Himanshu Koul) for the IBM Bobathon: Build for Bengaluru, with IBM Bob. MIT licensed, see [LICENSE](LICENSE).

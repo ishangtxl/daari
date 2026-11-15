@@ -2,8 +2,8 @@
  * Runs every language-model prompt on hard cases and checks the rules each prompt sets: language and
  * script, length, one question, no invented facts, no placeholders, JSON shape. Run it against one
  * provider at a time, so a fallback cannot hide a provider's mistakes:
- *   ZENMUX_API_KEY= npx tsx --env-file=.env scripts/prompt-eval.ts        (IBM Bob only)
- *   IBM_BOB_API_KEY= npx tsx --env-file=.env scripts/prompt-eval.ts       (ZenMux only)
+ *   ZENMUX_API_KEY= pnpm prompt-eval       (IBM Bob only)
+ *   IBM_BOB_API_KEY= pnpm prompt-eval      (ZenMux only)
  * Add a case name to run only the cases whose name contains it, and RUNS=5 to repeat each case.
  */
 import { z } from "zod";

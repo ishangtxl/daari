@@ -1,6 +1,8 @@
 // Drives the real app and real APIs in a browser, including the microphone using a recorded file.
-// Usage: node scripts/e2e.mjs <base url> <screenshot dir> <wav file>
+// Usage: node --env-file=.env scripts/e2e.mjs <base url> <screenshot dir> <wav file>
+// Signs in with a session made from AUTH_SECRET, which must match the server's.
 import { mkdirSync, statSync } from "node:fs";
+import { SignJWT } from "jose";
 import { chromium } from "playwright";
 
 const [base, out, wav] = process.argv.slice(2);
@@ -9,6 +11,14 @@ const browser = await chromium.launch({
   args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", `--use-file-for-fake-audio-capture=${wav}`, "--autoplay-policy=no-user-gesture-required"],
 });
 const context = await browser.newContext({ viewport: { width: 375, height: 760 }, permissions: ["microphone", "clipboard-read", "clipboard-write"], acceptDownloads: true });
+if (!process.env.AUTH_SECRET) throw new Error("Set AUTH_SECRET (the server's) to sign in");
+const session = await new SignJWT({ sub: `e2e-${Date.now()}`, provider: "google" })
+  .setProtectedHeader({ alg: "HS256" })
+  .setAudience("daari-session")
+  .setIssuedAt()
+  .setExpirationTime("2h")
+  .sign(new TextEncoder().encode(process.env.AUTH_SECRET));
+await context.addCookies([{ name: "daari_session", value: session, url: base }]);
 const page = await context.newPage();
 
 const problems = [];
@@ -33,7 +43,7 @@ await page.goto(base);
 await page.getByRole("button", { name: "हिन्दी" }).waitFor();
 await shot("01-language");
 await page.getByRole("button", { name: "हिन्दी" }).click();
-await page.getByRole("heading", { name: "आपने क्या काम किया है?" }).waitFor();
+await page.getByRole("heading", { name: "आप कहाँ से शुरू करना चाहेंगे?" }).waitFor();
 await shot("02-home");
 step("language chosen, home in Hindi");
 
@@ -49,7 +59,6 @@ await page.waitForFunction(() => document.querySelectorAll(".bubble-assistant .r
 step(`reply: ${await page.locator(".bubble-assistant p").last().innerText()}`);
 await shot("04-voice-reply");
 
-await page.getByRole("button", { name: "लिखकर बताएँ" }).click();
 for (const text of ["मैंने 10वीं पास की है, आईटीआई नहीं किया। मैं जयनगर में रहता हूँ।", "मुझे मोबाइल रिपेयर की नौकरी चाहिए। ड्राइविंग लाइसेंस नहीं है।"]) {
   const before = await page.locator(".bubble-assistant .read-aloud").count();
   await page.getByRole("textbox").fill(text);
@@ -60,7 +69,7 @@ for (const text of ["मैंने 10वीं पास की है, आई
 await page.waitForTimeout(5000);
 await shot("05-chat");
 
-await page.locator("nav").getByRole("link", { name: "नौकरी" }).click();
+await page.goto(`${base}/jobs`);
 await page.locator(".job-row").first().waitFor({ timeout: 60000 });
 step(`jobs matched: ${await page.locator(".job-row").count()}, first: ${await page.locator(".job-row h3").first().innerText()} (${await page.locator(".job-meets").first().innerText()})`);
 await shot("06-jobs");
@@ -78,10 +87,13 @@ if (await planButton.count()) {
 await page.getByRole("button", { name: "मेरा आवेदन तैयार करें" }).click();
 await page.locator(".question-list").waitFor({ timeout: 60000 });
 step(`apply kit: ${await page.locator(".kit-block p").first().innerText()}`);
-await page.getByRole("button", { name: "मैंने आवेदन कर दिया" }).click();
+// A job posted on Daari is applied for inside Daari, so it has no "I applied" button to tap.
+const applied = page.getByRole("button", { name: "मैंने आवेदन कर दिया" });
+if (await applied.count()) await applied.click();
+else step("job is posted on Daari, so it is applied for there");
 await shot("08-job-plan-kit");
 
-await page.locator("nav").getByRole("link", { name: "नौकरी" }).click();
+await page.goto(`${base}/jobs`);
 await page.getByRole("tab", { name: "यहाँ पूछिए" }).click();
 await page.getByRole("button", { name: "जगहें ढूँढें और मैसेज लिखें" }).click();
 await page.locator(".kit-block").first().waitFor({ timeout: 60000 });
@@ -91,20 +103,20 @@ await page.getByRole("tab", { name: "मेरे आवेदन" }).click();
 step(`applications tracked: ${await page.locator(".application-list li").count()}`);
 await shot("10-applications");
 
-await page.locator("nav").getByRole("link", { name: "सीखें" }).click();
+await page.goto(`${base}/learn`);
 await page.getByRole("button", { name: "मेरी सीखने की योजना बनाएँ" }).click();
 await page.locator(".plan-step").first().waitFor({ timeout: 60000 });
 await shot("11-learn");
 step("learning plan made");
 
-await page.locator("nav").getByRole("link", { name: "जाँचें" }).click();
+await page.goto(`${base}/check`);
 await page.getByRole("button", { name: "एक उदाहरण देखें" }).click();
 await page.getByRole("button", { name: "यह मैसेज जाँचें" }).click();
 await page.locator(".verdict").waitFor({ timeout: 30000 });
 step(`scam result: ${await page.locator(".verdict h2").innerText()} | ${(await page.locator(".signal-list li").allInnerTexts()).join("; ")}`);
 await shot("12-check");
 
-await page.locator("nav").getByRole("link", { name: "रिज्यूमे" }).click();
+await page.goto(`${base}/me`);
 await page.getByLabel("आपका नाम, अंग्रेज़ी अक्षरों में").fill("Ravi Kumar");
 await page.getByLabel("फ़ोन नंबर").fill("9876543210");
 await page.getByRole("button", { name: "मेरा रिज्यूमे लिखें" }).click();
@@ -129,7 +141,11 @@ for (const [width, height] of [[768, 1000], [1440, 900]]) {
   await shot(`w${width}-jobs`);
 }
 await page.setViewportSize({ width: 375, height: 760 });
-await page.evaluate(() => { const data = JSON.parse(localStorage.getItem("daari.v1")); data.lang = "kn"; localStorage.setItem("daari.v1", JSON.stringify(data)); });
+// Through the language menu, as a person would: the account's saved language wins over anything in the browser.
+await page.goto(base);
+await page.getByRole("button", { name: "भाषा" }).click();
+await page.locator(".lang-menu").getByRole("button", { name: "ಕನ್ನಡ" }).click();
+await page.getByRole("button", { name: "ಭಾಷೆ" }).waitFor();
 for (const [name, path] of [["kn-home", "/"], ["kn-jobs", "/jobs"], ["kn-check", "/check"], ["kn-me", "/me"]]) {
   await page.goto(`${base}${path}`);
   await page.waitForTimeout(path === "/jobs" ? 2500 : 500);

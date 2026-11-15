@@ -1,7 +1,7 @@
 /**
  * Sends one JSON request and one streamed reply through the language model, and prints which
  * provider answered (IBM Bob first, ZenMux if Bob fails) and how long each took.
- *   npx tsx --env-file=.env scripts/llm-smoke.ts
+ *   pnpm llm-smoke
  */
 import { readFileSync } from "node:fs";
 import { z } from "zod";
