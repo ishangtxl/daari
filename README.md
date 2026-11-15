@@ -2,13 +2,24 @@
 
 *Daari* (ದಾರಿ) means "the way" in Kannada.
 
+**[Live site](https://145-223-23-79.sslip.io)** · **[Problem statement and solution](docs/problem-and-solution.md)** · **[Run it locally](SETUP.md)** · **[Test plan](TESTING.md)**
+
+![Next.js 16](https://img.shields.io/badge/Next.js_16-000000?logo=nextdotjs&logoColor=white)
+![React 19](https://img.shields.io/badge/React_19-087EA4?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![IBM Bob](https://img.shields.io/badge/IBM_Bob-0F62FE)
+![Jev by TypeSafe](https://img.shields.io/badge/Jev_by_TypeSafe-5A3FD6)
+![Sarvam AI](https://img.shields.io/badge/Sarvam_AI-FF6B00)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
+![Google Maps Platform](https://img.shields.io/badge/Google_Maps_Platform-4285F4?logo=googlemaps&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)
+![MIT licence](https://img.shields.io/badge/licence-MIT-lightgrey)
+
 Bangalore has plenty of skilled work, and plenty of people who can do it: ITI and diploma holders, non-CS graduates, and people who learned a trade in a relative's shop. Most of them meet the job market through English-first portals that want a resume they don't have, use job titles they don't recognise, and give no reason for a rejection. Job scams aimed at exactly these people are common on WhatsApp and Telegram.
 
 Daari is a career counsellor you talk to in Kannada, Hindi or English. It asks about the work you have done, informal work included, and gives you a short plan. It finds jobs that fit and shows which requirements you already meet. It teaches the ones you don't, writes a resume from what you said, and checks job messages for the signs of a scam.
 
 Small employers can post on Daari too. A shop owner describes the job by talking or typing in their own language. Daari writes the posting in all three languages and refuses any posting that charges applicants. People whose skills fit then apply inside Daari, and hear back there.
-
-**Live:** https://145-223-23-79.sslip.io
 
 <table>
   <tr>
@@ -169,45 +180,9 @@ Only the language choice is kept in the browser, for the screens before sign-in.
 
 ## Running it locally
 
-You need Node 23 or newer, for `node:sqlite`, and pnpm.
+[SETUP.md](SETUP.md) covers installing, the API keys and where each comes from, Google sign-in, and every script. In short: Node 23 or newer and pnpm, then `pnpm install`, `cp .env.example .env`, fill in the keys, and `pnpm dev`.
 
-```
-pnpm install
-cp .env.example .env    # then fill in the keys below
-pnpm dev
-```
-
-Server-side keys:
-
-```
-IBM_BOB_API_KEY=         # language model, tried first
-ZENMUX_API_KEY=          # language model fallback, and the only one used without a Bob key
-JEV_API_KEY=
-SARVAM_API_KEY=
-X_RAPIDAPI_KEY=          # JSearch, only needed to refresh the job catalog
-X_RAPIDAPI_HOST=jsearch.p.rapidapi.com
-GOOGLE_PLACES_API_KEY=   # optional: real shops in Places to ask
-GOOGLE_ROUTES_API_KEY=   # optional: road-distance sorting and filters
-YOUTUBE_API_KEY=         # optional: real videos and playlists in learning plans
-```
-
-Every page needs sign-in, so `AUTH_SECRET` (at least 32 characters) and the Google keys in `.env.example` are needed too. Google sign-in stays off until `GOOGLE_SIGNIN=on`. Turn that on only after `GOOGLE_REDIRECT_URI` is added as an authorised redirect URI in Google Cloud. In production, `APP_BASE_URL` sets the public address that Google sign-in returns to.
-
-| Command | What it does |
-|---|---|
-| `pnpm dev` | Runs the app at http://localhost:3000 |
-| `pnpm test` | Runs the unit tests |
-| `pnpm typecheck` | Checks types |
-| `pnpm catalog` | Refreshes the job listings, using cached responses where it can |
-| `pnpm scam-eval` | Runs the scam signals over hand-written examples and real listings |
-| `pnpm posting-eval` | Screens 100 test postings, half of them asking for money, and prints how many were blocked and how long each check took |
-| `pnpm prompt-eval` | Runs every language-model prompt on hard cases and checks its rules: language and script, length, one question, no invented facts. Run it with `ZENMUX_API_KEY=` to test IBM Bob alone, or `IBM_BOB_API_KEY=` to test ZenMux alone |
-| `pnpm llm-smoke` | Sends one request and one streamed reply, and prints which provider answered |
-| `node --env-file=.env scripts/e2e.mjs <url> <screenshot dir> <wav>` | Drives the app in a browser with real APIs, using a WAV file as the microphone. It signs in with a session made from `AUTH_SECRET`, so that must match the server's |
-
-### Spending
-
-Each server process stops calling the language model after `SPEND_LIMIT_USD` (default $11, about ₹1,000), counted at listed prices. Each API route also has a per-address rate limit. YouTube search results are cached for a day, which keeps the daily quota of about 100 searches enough for a demo.
+## Distances and pay
 
 ### Road distances
 
