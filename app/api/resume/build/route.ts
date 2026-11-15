@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { nouls } from "@/lib/server/jev";
-import { MODELS, chatJson } from "@/lib/server/llm";
+import { chatJson } from "@/lib/server/llm";
 import { evidence } from "@/lib/server/match";
 import { resumePrompt } from "@/lib/server/prompts";
 import { jsonRoute } from "@/lib/server/route";
@@ -17,7 +17,7 @@ export const POST = jsonRoute("resume-build", schema, async ({ lang, profile }) 
   const { review, ...draft } = await chatJson("resume", draftSchema, [
     { role: "system", content: resumePrompt(lang) },
     { role: "user", content: state },
-  ], { model: MODELS.resume, maxTokens: 2000 });
+  ], { role: "resume", maxTokens: 2000 });
 
   const bullets = draft.experience.flatMap((item, itemIndex) =>
     item.bullets.map((text, bulletIndex) => ({ key: `b${itemIndex}_${bulletIndex}`, text })),
