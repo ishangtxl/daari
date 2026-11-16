@@ -151,7 +151,8 @@ export async function chatJson<S extends z.ZodType>(
           max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
           reasoning_effort: "none",
           response_format: { type: "json_object" },
-        }, JSON_TIMEOUT_MS);
+        // The second limit also covers reading the reply, so a reply that stalls halfway is given up on too.
+        }, JSON_TIMEOUT_MS, AbortSignal.timeout(JSON_TIMEOUT_MS * 2));
       } catch (error) {
         providerError = error; // A timeout or network failure: move to the next provider.
         break;

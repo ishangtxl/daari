@@ -15,6 +15,9 @@ export async function decide(state: string, questions: Record<string, Question>)
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: "jev-latest", state, questions }),
+      // A Jev answer normally takes a quarter of a second. Without a limit, one stalled request
+      // would leave the page waiting forever.
+      signal: AbortSignal.timeout(20_000),
     });
     if (res.ok) return (await res.json()).answers;
     lastStatus = res.status;
