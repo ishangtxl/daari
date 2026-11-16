@@ -26,7 +26,7 @@ Open `.env` and fill these in. Every key stays on the server and never reaches t
 | `GOOGLE_PLACES_API_KEY` | Real local shops in **Places to ask** | No. Without it, Daari links to a Google Maps search |
 | `GOOGLE_ROUTES_API_KEY` | Road-distance sorting and filters on Jobs | No. Without it, those options are hidden |
 | `YOUTUBE_API_KEY` | YouTube Data API v3, for real videos in learning plans | No. Without it, a plan links to a YouTube search |
-| `X_RAPIDAPI_KEY` | JSearch on RapidAPI | Only to refresh the job catalog with `pnpm catalog`. The app ships with 212 listings in `data/jobs.json` |
+| `X_RAPIDAPI_KEY` | JSearch on RapidAPI | Only to refresh the job catalog with `pnpm catalog`. The app ships with 222 listings in `data/jobs.json` |
 
 ## 3. Set up Google sign-in
 

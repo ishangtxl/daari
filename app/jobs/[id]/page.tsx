@@ -182,7 +182,8 @@ export default function JobDetail() {
   const listed = jobs?.find((item) => item.id === id);
   // Listed matches carry Jev's checks; the posting itself carries what is true now.
   const job = posting ? { ...(listed ?? asMatched(posting.job, profile.confirmed)), ...posting.job } : listed;
-  if (!job) return <Shell><div className="page">{back}<p className="empty-text">{view === "failed" ? t("genericError") : t("noProfileBody")}</p></div></Shell>;
+  // A job saved from an older catalog, such as one in the applied list, may no longer be listed.
+  if (!job) return <Shell><div className="page">{back}<p className="empty-text">{view === "failed" ? t("genericError") : jobs ? t("postingGone") : t("noProfileBody")}</p></div></Shell>;
 
   const statusOf = (reqId: string): StopStatus => job.stops.find((stop) => stop.id === reqId)?.status ?? "unsure";
   const order: Record<StopStatus, number> = { met: 0, unsure: 1, gap: 2 };

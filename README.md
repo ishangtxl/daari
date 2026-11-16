@@ -127,7 +127,7 @@ Most of the jobs these people end up doing are in small shops and workshops that
 | Speech to text, text to speech | Sarvam: `saaras:v3` (handles mixed Kannada, Hindi and English) and `bulbul:v3` |
 | Conversation, plans, writing, translation | IBM Bob's `premium` model. If Bob returns an error, an unusable reply or no reply in time, the same request goes to GPT-6 Luna through ZenMux (GPT-6.1 Terra for resumes), and Bob is skipped for a minute. `pnpm llm-smoke` shows which one answered. |
 | Fast yes/no decisions: job fit, each requirement, scam signals, whether a posting may go up and its kind of work, resume claims, when to make a plan, whether a video fits | Jev (TypeSafe), around 250ms per decision |
-| Job listings | JSearch, prepared ahead of time into `data/jobs.json` (212 Bangalore listings), plus the jobs employers post on Daari |
+| Job listings | JSearch, prepared ahead of time into `data/jobs.json` (222 Bangalore listings, last refreshed on 16 November 2026), plus the jobs employers post on Daari |
 | Local businesses | Google Places, or a Google Maps search when no key is set |
 | Road distances | Google Routes API |
 | Learning videos | YouTube Data API |
